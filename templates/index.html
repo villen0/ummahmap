@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ app_name }}</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body>
+  <header class="header">
+    <div class="brand">
+      <div class="logo">🕌</div>
+      <div>
+        <div class="title">{{ app_name }}</div>
+        <div class="sub" id="hijriDate"></div>
+      </div>
+    </div>
+    <div class="quote" id="quote"></div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Nearest Mosque</h2>
+      <div id="mosqueBox" class="muted">Tap “Find Nearest Mosque”</div>
+      <div class="actions">
+        <button id="btnFind">Find Nearest Mosque</button>
+        <a id="btnDirections" class="btnLink" target="_blank" rel="noopener" style="display:none;">Open Directions</a>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Prayer Times (by GPS)</h2>
+      <div class="muted">Calculated for your current location (adhan times). Masjid iqama times may differ.</div>
+      <div class="actions">
+        <button id="btnPrayerGps">Get Prayer Times (GPS)</button>
+      </div>
+      
+      <div id="prayerGpsStatus" class="status muted"></div>
+      <div id="prayerGpsCards" class="ptGrid" style="display:none;"></div>
+      <div id="prayerGpsMeta" class="meta muted" style="display:none;"></div>
+
+    </section>
+
+    <section class="card">
+      <h2>Qibla</h2>
+      <div class="qiblaWrap">
+        <div class="compass">
+          <div class="arrow" id="qiblaArrow"></div>
+          <div class="north">N</div>
+        </div>
+        <div class="qiblaInfo">
+          <div><b>Bearing:</b> <span id="qiblaBearing">—</span>°</div>
+          <div class="muted">Allow location. If your phone supports a compass, the arrow will point relative to your heading.</div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnQibla">Update Qibla</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
