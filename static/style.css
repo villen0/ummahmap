@@ -143,6 +143,7 @@ input {
   top: 12px;
   transform: translateX(-50%) rotate(0deg);
   transform-origin: 50% 40px;
+  transition: transform 0.15s linear;
 }
 
 .qiblaInfo { max-width: 520px; }

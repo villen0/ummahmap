@@ -171,38 +171,89 @@ document.getElementById("btnPrayer").addEventListener("click", async () => {
   }
 });
 
+// ========= REAL TIME QIBLA =========
+let qiblaBearing = null;
 let lastHeading = null;
+let watchId = null;
 
-if (window.DeviceOrientationEvent) {
-  window.addEventListener("deviceorientationabsolute", (e) => {
-    if (typeof e.alpha === "number") lastHeading = e.alpha;
-  });
-  window.addEventListener("deviceorientation", (e) => {
-    if (typeof e.alpha === "number") lastHeading = e.alpha;
-  });
+function normalizeDeg(d){
+  return (d % 360 + 360) % 360;
 }
 
-function rotateArrow(deg) {
-  document.getElementById("qiblaArrow").style.transform = `translateX(-50%) rotate(${deg}deg)`;
+function rotateArrow(deg){
+  document.getElementById("qiblaArrow").style.transform =
+    `translateX(-50%) rotate(${deg}deg)`;
 }
 
-document.getElementById("btnQibla").addEventListener("click", async () => {
-  try {
-    const loc = await getLocation();
-    const res = await fetch(`/api/qibla?lat=${loc.lat}&lng=${loc.lng}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed");
+// listen compass
+function handleOrientation(e){
+  if(typeof e.alpha !== "number") return;
+  lastHeading = normalizeDeg(e.alpha);
 
-    const bearing = data.bearing_deg;
-    document.getElementById("qiblaBearing").textContent = bearing.toFixed(1);
+  if(typeof qiblaBearing === "number"){
+    const relative = normalizeDeg(qiblaBearing - lastHeading);
+    rotateArrow(relative);
+  }
+}
 
-    if (typeof lastHeading === "number") {
-      const relative = (bearing - lastHeading + 360) % 360;
+function startCompass(){
+  window.addEventListener("deviceorientationabsolute", handleOrientation, true);
+  window.addEventListener("deviceorientation", handleOrientation, true);
+}
+
+async function fetchQibla(lat,lng){
+  const res = await fetch(`/api/qibla?lat=${lat}&lng=${lng}`);
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.error || "Qibla failed");
+  return data.bearing_deg;
+}
+
+function startLocationWatch(){
+  if(!navigator.geolocation) return;
+
+  watchId = navigator.geolocation.watchPosition(async(pos)=>{
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+
+    qiblaBearing = await fetchQibla(lat,lng);
+    document.getElementById("qiblaBearing").textContent =
+      qiblaBearing.toFixed(1);
+
+    if(typeof lastHeading === "number"){
+      const relative = normalizeDeg(qiblaBearing - lastHeading);
       rotateArrow(relative);
     } else {
-      rotateArrow(bearing);
+      rotateArrow(qiblaBearing);
     }
-  } catch (e) {
-    alert(`Qibla error: ${e.message}`);
+
+  }, err=>{
+    console.log(err);
+  }, {enableHighAccuracy:true});
+}
+
+// iPhone permission fix
+async function askMotion(){
+  if(typeof DeviceOrientationEvent !== "undefined" &&
+     typeof DeviceOrientationEvent.requestPermission === "function"){
+       const p = await DeviceOrientationEvent.requestPermission();
+       if(p !== "granted") throw new Error("permission denied");
   }
+}
+
+async function startQiblaLive(){
+  try{
+    await askMotion();
+    startCompass();
+    startLocationWatch();
+  }catch(e){
+    console.log("Need user tap for compass");
+  }
+}
+
+// AUTO start
+startQiblaLive();
+
+// button fallback (important for iPhone)
+document.getElementById("btnQibla").addEventListener("click", async ()=>{
+  await startQiblaLive();
 });
