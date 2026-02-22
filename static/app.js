@@ -40,15 +40,31 @@ async function setHijriDate() {
   }
 }
 
+
 setHijriDate();
 
 function getLocation() {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation not supported"));
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      (err) => reject(err),
-      { enableHighAccuracy: true, timeout: 12000 }
+      (pos) => {
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        });
+      },
+      (err) => {
+        reject(new Error("Location permission denied or timeout"));
+      },
+      {
+        enableHighAccuracy: false, // 🔥 FIX FOR MAC
+        timeout: 20000,
+        maximumAge: 60000
+      }
     );
   });
 }
