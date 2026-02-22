@@ -141,36 +141,6 @@ if (data.gregorian?.date) {
   }
 });
 
-document.getElementById("btnPrayer").addEventListener("click", async () => {
-  const status = document.getElementById("prayerStatus");
-  const out = document.getElementById("prayerBox");
-  status.textContent = "Loading prayer times from website...";
-  out.textContent = "";
-  const url = document.getElementById("prayerUrl").value.trim();
-  const rowSel = document.getElementById("rowSel").value.trim();
-  const nameSel = document.getElementById("nameSel").value.trim();
-  const timeSel = document.getElementById("timeSel").value.trim();
-
-  try {
-    const qs = new URLSearchParams({
-      url,
-      row_selector: rowSel,
-      name_selector: nameSel,
-      time_selector: timeSel
-    });
-
-    const res = await fetch(`/api/prayer_times_from_website?${qs.toString()}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed");
-    status.textContent = "";
-    out.textContent = JSON.stringify(data, null, 2);
-  } catch (e) {
-    status.textContent = `Error: ${e.message}`;
-    out.textContent = "Tip: update the CSS selectors to match the mosque website.";
-
-  }
-});
-
 // ======================= QIBLA (LIVE + SAFE) =======================
 
 // DOM helpers (safe)
