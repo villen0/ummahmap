@@ -21,7 +21,7 @@ async function setHijriDate() {
     const pos = await getLocation();
 
     const res = await fetch(
-      `/api/prayer-times?lat=${pos.lat}&lng=${pos.lng}`
+      `/api/prayer_times?lat=${pos.lat}&lng=${pos.lng}`
     );
 
     const data = await res.json();
