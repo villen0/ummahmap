@@ -171,77 +171,121 @@ document.getElementById("btnPrayer").addEventListener("click", async () => {
   }
 });
 
-// ========= QIBLA (ANDROID + IPHONE) =========
-let qiblaBearing = null;
-let heading = null;
+// ===================== QIBLA: LIVE COMPASS (iPhone + Android) =====================
+let qiblaBearing = null; // bearing to Kaaba (0-360)
+let heading = null; // device heading (0-360)
 let compassStarted = false;
 
-function norm(d){
+const qiblaArrowEl = document.getElementById("qiblaArrow");
+const qiblaBearingEl = document.getElementById("qiblaBearing");
+const btnQibla = document.getElementById("btnQibla");
+
+function normalizeDeg(d) {
   return (d % 360 + 360) % 360;
 }
 
-function rotateArrow(deg){
-  document.getElementById("qiblaArrow").style.transform =
-    `translateX(-50%) rotate(${deg}deg)`;
+function rotateArrow(relativeDeg) {
+  // keep translateX(-50%) because your CSS centers the arrow
+  qiblaArrowEl.style.transform = `translateX(-50%) rotate(${relativeDeg}deg)`;
 }
 
-// Works for iPhone + Android
-function getHeading(e){
+async function getLocationOnce() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("Geolocation not supported"));
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => reject(err),
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  });
+}
+
+async function fetchQiblaBearing(lat, lng) {
+  const res = await fetch(`/api/qibla?lat=${lat}&lng=${lng}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Qibla API failed");
+  return Number(data.bearing_deg);
+}
+
+function updateNeedle() {
+  if (typeof qiblaBearing !== "number") return;
+  if (typeof heading !== "number") {
+    // If we don't have compass heading yet, at least point to absolute bearing
+    rotateArrow(qiblaBearing);
+    return;
+  }
+  const relative = normalizeDeg(qiblaBearing - heading);
+  rotateArrow(relative);
+}
+
+// iOS Safari: best heading is webkitCompassHeading
+function handleOrientation(e) {
+  let newHeading = null;
+
   if (typeof e.webkitCompassHeading === "number") {
-    return e.webkitCompassHeading; // iOS Safari
+    // iOS Safari gives compass heading directly (0 = north)
+    newHeading = e.webkitCompassHeading;
+  } else if (typeof e.alpha === "number") {
+    // Many Android devices: alpha is 0..360 but direction can be reversed depending on browser.
+    // Common approach: heading = 360 - alpha
+    newHeading = 360 - e.alpha;
   }
-  if (typeof e.alpha === "number") {
-    return norm(360 - e.alpha); // Android
-  }
-  return null;
-}
 
-function onOrientation(e){
-  const h = getHeading(e);
-  if (h == null) return;
-
-  heading = h;
-
-  if (typeof qiblaBearing === "number"){
-    const relative = norm(qiblaBearing - heading);
-    rotateArrow(relative);
+  if (typeof newHeading === "number") {
+    heading = normalizeDeg(newHeading);
+    updateNeedle();
   }
 }
 
-async function askPermissionIfNeeded(){
-  if (typeof DeviceOrientationEvent !== "undefined" &&
-      typeof DeviceOrientationEvent.requestPermission === "function") {
-    const p = await DeviceOrientationEvent.requestPermission();
-    if (p !== "granted") throw new Error("Compass permission denied");
-  }
-}
-
-function startCompass(){
+function startCompassListeners() {
   if (compassStarted) return;
   compassStarted = true;
 
-  window.addEventListener("deviceorientationabsolute", onOrientation, true);
-  window.addEventListener("deviceorientation", onOrientation, true);
+  // Some browsers fire only one of these; listen to both.
+  window.addEventListener("deviceorientationabsolute", handleOrientation, true);
+  window.addEventListener("deviceorientation", handleOrientation, true);
 }
 
-async function loadQibla(){
-  const loc = await getLocation();
-  const res = await fetch(`/api/qibla?lat=${loc.lat}&lng=${loc.lng}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Qibla failed");
-
-  qiblaBearing = Number(data.bearing_deg);
-  document.getElementById("qiblaBearing").textContent =
-    qiblaBearing.toFixed(1);
+// iPhone permission (must be called from a user gesture)
+async function requestIOSPermissionIfNeeded() {
+  if (
+    typeof DeviceOrientationEvent !== "undefined" &&
+    typeof DeviceOrientationEvent.requestPermission === "function"
+  ) {
+    const p = await DeviceOrientationEvent.requestPermission();
+    if (p !== "granted") throw new Error("Motion/orientation permission denied");
+  }
 }
 
-// Button = required for iPhone permission
-document.getElementById("btnQibla").addEventListener("click", async ()=>{
-  try{
-    await askPermissionIfNeeded();
-    startCompass();
-    await loadQibla();
-  }catch(e){
-    alert(e.message);
+async function startQibla() {
+  // 1) Get bearing once (based on location)
+  const loc = await getLocationOnce();
+  qiblaBearing = await fetchQiblaBearing(loc.lat, loc.lng);
+  qiblaBearingEl.textContent = qiblaBearing.toFixed(1);
+
+  // 2) Start compass
+  startCompassListeners();
+
+  // 3) Update immediately even if compass is slow
+  updateNeedle();
+}
+
+// Button = required for iPhone, optional for Android
+btnQibla.addEventListener("click", async () => {
+  try {
+    await requestIOSPermissionIfNeeded();
+    await startQibla();
+  } catch (e) {
+    alert(`Qibla error: ${e.message}`);
   }
 });
+
+// Auto-start on Android/desktop (won't work on iPhone unless user taps)
+(async () => {
+  try {
+    await startQibla();
+  } catch (e) {
+    // iPhone will land here until user taps the button (permission requirement)
+    console.log("Qibla auto-start blocked (likely iPhone permission). Tap 'Update Qibla'.", e);
+  }
+})();
