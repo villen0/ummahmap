@@ -28,8 +28,12 @@ async function setHijriDate() {
 
     const h = data.hijri;
 
-    el.textContent =
-      `Hijri: ${h.weekday?.en || ""}, ${h.day} ${h.month.en} ${h.year} AH`;
+    const cleanMonth = h.month.en
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "");
+
+   el.textContent =
+  `Hijri: ${h.weekday?.en || ""}, ${h.day} ${cleanMonth} ${h.year} AH`;
 
   } catch (e) {
     el.textContent = "Hijri: Unable to load";
