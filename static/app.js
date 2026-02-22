@@ -171,12 +171,12 @@ document.getElementById("btnPrayer").addEventListener("click", async () => {
   }
 });
 
-// ========= REAL TIME QIBLA =========
+// ========= QIBLA (ANDROID + IPHONE) =========
 let qiblaBearing = null;
-let lastHeading = null;
-let watchId = null;
+let heading = null;
+let compassStarted = false;
 
-function normalizeDeg(d){
+function norm(d){
   return (d % 360 + 360) % 360;
 }
 
@@ -185,75 +185,63 @@ function rotateArrow(deg){
     `translateX(-50%) rotate(${deg}deg)`;
 }
 
-// listen compass
-function handleOrientation(e){
-  if(typeof e.alpha !== "number") return;
-  lastHeading = normalizeDeg(e.alpha);
+// Works for iPhone + Android
+function getHeading(e){
+  if (typeof e.webkitCompassHeading === "number") {
+    return e.webkitCompassHeading; // iOS Safari
+  }
+  if (typeof e.alpha === "number") {
+    return norm(360 - e.alpha); // Android
+  }
+  return null;
+}
 
-  if(typeof qiblaBearing === "number"){
-    const relative = normalizeDeg(qiblaBearing - lastHeading);
+function onOrientation(e){
+  const h = getHeading(e);
+  if (h == null) return;
+
+  heading = h;
+
+  if (typeof qiblaBearing === "number"){
+    const relative = norm(qiblaBearing - heading);
     rotateArrow(relative);
   }
 }
 
+async function askPermissionIfNeeded(){
+  if (typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function") {
+    const p = await DeviceOrientationEvent.requestPermission();
+    if (p !== "granted") throw new Error("Compass permission denied");
+  }
+}
+
 function startCompass(){
-  window.addEventListener("deviceorientationabsolute", handleOrientation, true);
-  window.addEventListener("deviceorientation", handleOrientation, true);
+  if (compassStarted) return;
+  compassStarted = true;
+
+  window.addEventListener("deviceorientationabsolute", onOrientation, true);
+  window.addEventListener("deviceorientation", onOrientation, true);
 }
 
-async function fetchQibla(lat,lng){
-  const res = await fetch(`/api/qibla?lat=${lat}&lng=${lng}`);
+async function loadQibla(){
+  const loc = await getLocation();
+  const res = await fetch(`/api/qibla?lat=${loc.lat}&lng=${loc.lng}`);
   const data = await res.json();
-  if(!res.ok) throw new Error(data.error || "Qibla failed");
-  return data.bearing_deg;
+  if (!res.ok) throw new Error(data.error || "Qibla failed");
+
+  qiblaBearing = Number(data.bearing_deg);
+  document.getElementById("qiblaBearing").textContent =
+    qiblaBearing.toFixed(1);
 }
 
-function startLocationWatch(){
-  if(!navigator.geolocation) return;
-
-  watchId = navigator.geolocation.watchPosition(async(pos)=>{
-    const lat = pos.coords.latitude;
-    const lng = pos.coords.longitude;
-
-    qiblaBearing = await fetchQibla(lat,lng);
-    document.getElementById("qiblaBearing").textContent =
-      qiblaBearing.toFixed(1);
-
-    if(typeof lastHeading === "number"){
-      const relative = normalizeDeg(qiblaBearing - lastHeading);
-      rotateArrow(relative);
-    } else {
-      rotateArrow(qiblaBearing);
-    }
-
-  }, err=>{
-    console.log(err);
-  }, {enableHighAccuracy:true});
-}
-
-// iPhone permission fix
-async function askMotion(){
-  if(typeof DeviceOrientationEvent !== "undefined" &&
-     typeof DeviceOrientationEvent.requestPermission === "function"){
-       const p = await DeviceOrientationEvent.requestPermission();
-       if(p !== "granted") throw new Error("permission denied");
-  }
-}
-
-async function startQiblaLive(){
-  try{
-    await askMotion();
-    startCompass();
-    startLocationWatch();
-  }catch(e){
-    console.log("Need user tap for compass");
-  }
-}
-
-// AUTO start
-startQiblaLive();
-
-// button fallback (important for iPhone)
+// Button = required for iPhone permission
 document.getElementById("btnQibla").addEventListener("click", async ()=>{
-  await startQiblaLive();
+  try{
+    await askPermissionIfNeeded();
+    startCompass();
+    await loadQibla();
+  }catch(e){
+    alert(e.message);
+  }
 });
