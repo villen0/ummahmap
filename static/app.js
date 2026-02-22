@@ -13,14 +13,26 @@ function setQuote() {
 setQuote();
 setInterval(setQuote, 5 * 60 * 1000);
 
-function setHijriDate() {
+
+async function setHijriDate() {
   const el = document.getElementById("hijriDate");
+
   try {
-    const now = new Date();
-    const fmt = new Intl.DateTimeFormat("en", { calendar: "islamic", dateStyle: "full" });
-    el.textContent = `Hijri: ${fmt.format(now)}`;
+    const pos = await getLocation();
+
+    const res = await fetch(
+      `/api/prayer-times?lat=${pos.lat}&lng=${pos.lng}`
+    );
+
+    const data = await res.json();
+
+    const h = data.hijri;
+
+    el.textContent =
+      `Hijri: ${h.weekday?.en || ""}, ${h.day} ${h.month.en} ${h.year} AH`;
+
   } catch (e) {
-    el.textContent = "Hijri: (not supported by this browser)";
+    el.textContent = "Hijri: Unable to load";
   }
 }
 setHijriDate();
