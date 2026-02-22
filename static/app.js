@@ -13,7 +13,6 @@ function setQuote() {
 setQuote();
 setInterval(setQuote, 5 * 60 * 1000);
 
-
 async function setHijriDate() {
   const el = document.getElementById("hijriDate");
 
@@ -25,20 +24,20 @@ async function setHijriDate() {
     );
 
     const data = await res.json();
-
     const h = data.hijri;
 
     const cleanMonth = h.month.en
-  .normalize("NFD")
-  .replace(/[\u0300-\u036f]/g, "");
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
 
-   el.textContent =
-  `Hijri: ${h.weekday?.en || ""}, ${h.day} ${cleanMonth} ${h.year} AH`;
+    el.textContent =
+      `Hijri: ${h.weekday?.en || ""}, ${h.day} ${cleanMonth} ${h.year} AH`;
 
   } catch (e) {
     el.textContent = "Hijri: Unable to load";
   }
 }
+
 setHijriDate();
 
 function getLocation() {
