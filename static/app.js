@@ -13,6 +13,8 @@ function setQuote() {
 setQuote();
 setInterval(setQuote, 5 * 60 * 1000);
 
+
+
 async function setHijriDate() {
   const el = document.getElementById("hijriDate");
 
