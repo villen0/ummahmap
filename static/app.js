@@ -1,199 +1,316 @@
+// ===================== QUOTES =====================
 const QUOTES = [
   "Indeed, with hardship comes ease. (Qur'an 94:6)",
   "So remember Me; I will remember you. (Qur'an 2:152)",
   "Allah does not burden a soul beyond that it can bear. (Qur'an 2:286)",
   "The best among you are those who have the best manners. (Hadith)",
-  "Whoever relies upon Allah - then He is sufficient for him. (Qur'an 65:3)"
+  "Whoever relies upon Allah — then He is sufficient for him. (Qur'an 65:3)",
+  "Speak good or remain silent. (Hadith — Bukhari & Muslim)",
+  "The strong person is not the one who can wrestle others; it is the one who controls himself when angry. (Hadith)",
+  "Allah is beautiful and loves beauty. (Hadith — Muslim)",
+  "Make things easy, do not make them difficult. (Hadith)",
+  "Verily, with every difficulty there is relief. (Qur'an 94:5)"
 ];
 
 function setQuote() {
-  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-  document.getElementById("quote").textContent = q;
+  const el = document.getElementById("quote");
+  if (!el) return;
+  el.style.opacity = "0";
+  setTimeout(() => {
+    el.textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+    el.style.opacity = "0.9";
+  }, 300);
 }
 setQuote();
 setInterval(setQuote, 5 * 60 * 1000);
 
 
-
-async function setHijriDate() {
-  const el = document.getElementById("hijriDate");
-
-  try {
-    const pos = await getLocation();
-
-    const res = await fetch(
-      `/api/prayer_times?lat=${pos.lat}&lng=${pos.lng}`
-    );
-
-    const data = await res.json();
-    const h = data.hijri;
-
-    const cleanMonth = h.month.en
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-
-    el.textContent =
-      `Hijri: ${h.weekday?.en || ""}, ${h.day} ${cleanMonth} ${h.year} AH`;
-
-  } catch (e) {
-    el.textContent = "Hijri: Unable to load";
-  }
+// ===================== SETTINGS =====================
+function getSettings() {
+  return {
+    method: parseInt(localStorage.getItem("um_method") || "2", 10),
+    school:  parseInt(localStorage.getItem("um_school")  || "0", 10),
+    limit:   parseInt(localStorage.getItem("um_limit")   || "5", 10)
+  };
 }
 
+function saveSettings() {
+  const m = document.getElementById("settingMethod").value;
+  const s = document.getElementById("settingSchool").value;
+  const l = document.getElementById("settingLimit").value;
+  localStorage.setItem("um_method", m);
+  localStorage.setItem("um_school", s);
+  localStorage.setItem("um_limit", l);
+}
 
-setHijriDate();
+function applySettingsToUI() {
+  const s = getSettings();
+  document.getElementById("settingMethod").value = s.method;
+  document.getElementById("settingSchool").value  = s.school;
+  document.getElementById("settingLimit").value   = s.limit;
+}
+
+function openSettings() {
+  applySettingsToUI();
+  document.getElementById("settingsPanel").classList.remove("hidden");
+  document.getElementById("settingsOverlay").classList.remove("hidden");
+}
+
+function closeSettings() {
+  document.getElementById("settingsPanel").classList.add("hidden");
+  document.getElementById("settingsOverlay").classList.add("hidden");
+}
+
+document.getElementById("openSettings").addEventListener("click", openSettings);
+document.getElementById("closeSettings").addEventListener("click", closeSettings);
+document.getElementById("settingsOverlay").addEventListener("click", closeSettings);
+
+document.getElementById("applySettings").addEventListener("click", () => {
+  saveSettings();
+  closeSettings();
+  // Re-fetch everything with new settings
+  cachedLoc = null;
+  startEverything();
+});
+
+
+// ===================== LOCATION =====================
+let cachedLoc = null;
 
 function getLocation() {
+  if (cachedLoc) return Promise.resolve(cachedLoc);
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error("Geolocation not supported"));
-      return;
-    }
-
+    if (!navigator.geolocation) { reject(new Error("Geolocation not supported")); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        resolve({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude
-        });
+        cachedLoc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        resolve(cachedLoc);
       },
-      (err) => {
-        reject(new Error("Location permission denied or timeout"));
-      },
-      {
-        enableHighAccuracy: false, // 🔥 FIX FOR MAC
-        timeout: 20000,
-        maximumAge: 60000
-      }
+      () => reject(new Error("Location permission denied or timed out")),
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
     );
   });
 }
 
-document.getElementById("btnFind").addEventListener("click", async () => {
-  const box = document.getElementById("mosqueBox");
-  box.textContent = "Finding nearest mosque...";
+
+// ===================== HIJRI DATE =====================
+async function setHijriDate() {
+  const el = document.getElementById("hijriDate");
   try {
     const loc = await getLocation();
-    const res = await fetch(`/api/nearest_mosque?lat=${loc.lat}&lng=${loc.lng}`);
+    const res = await fetch(`/api/prayer_times?lat=${loc.lat}&lng=${loc.lng}&method=${getSettings().method}&school=${getSettings().school}`);
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed");
-
-    box.innerHTML = `
-      <div><b>${data.name}</b></div>
-      <div class="muted">${data.address || ""}</div>
-      <div class="muted">(${data.lat.toFixed(5)}, ${data.lng.toFixed(5)})</div>
-    `;
-
-    const dir = document.getElementById("btnDirections");
-    dir.href = data.maps_directions_url;
-    dir.style.display = "inline-block";
-    dir.textContent = "Open Directions (Google Maps)";
-  } catch (e) {
-    box.textContent = `Error: ${e.message}`;
-  }
-});
-
-document.getElementById("btnPrayerGps").addEventListener("click", async () => {
-  const status = document.getElementById("prayerGpsStatus");
-  const grid = document.getElementById("prayerGpsCards");
-  const meta = document.getElementById("prayerGpsMeta");
-
-  status.textContent = "Loading prayer times...";
-  grid.style.display = "none";
-  meta.style.display = "none";
-  grid.innerHTML = "";
-  meta.innerHTML = "";
-
-  try {
-    const loc = await getLocation();
-    // Defaults: method=2 (ISNA), school=0 (Shafi). If you prefer Hanafi: school=1
-    const res = await fetch(`/api/prayer_times?lat=${loc.lat}&lng=${loc.lng}&method=2&school=0`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed");
-
-    const timings = data.timings || {};
-    const order = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
-
-    order.forEach((name) => {
-      const t = timings[name];
-      if (!t) return;
-
-      const card = document.createElement("div");
-      card.className = "ptCard";
-      card.innerHTML = `
-        <div class="ptName">${name}</div>
-        <div class="ptTime">${t}</div>
-      `;
-      grid.appendChild(card);
-    });
-
-    const tz = data.timezone ? data.timezone : "";
-    const methodName = data.method?.name ? data.method.name : "";
-    const hijri = data.hijri?.date ? data.hijri.date : "";
-    const hijriLabel = data.hijri?.weekday?.en ? data.hijri.weekday.en : "";
-    let gregDate = "";
-if (data.gregorian?.date) {
-  const parts = data.gregorian.date.split("-"); // DD-MM-YYYY
-  if (parts.length === 3) {
-    const dd = parts[0];
-    const mm = parts[1];
-    const yyyy = parts[2];
-    const yy = yyyy.slice(-2);
-    gregDate = `${mm}/${dd}/${yy}`; // mm/dd/yy
+    const h = data.hijri;
+    const cleanMonth = h.month.en.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    el.textContent = `${h.weekday?.en || ""}, ${h.day} ${cleanMonth} ${h.year} AH`;
+  } catch {
+    el.textContent = "Hijri date unavailable";
   }
 }
 
-    meta.innerHTML = `
-      <div><b>Timezone:</b> ${tz || "—"}</div>
-      <div><b>Method:</b> ${methodName || "—"}</div>
-      <div><b>Today:</b> ${gregDate || "—"} &nbsp;|&nbsp; <b>Hijri:</b> ${hijriLabel ? (hijriLabel + ", ") : ""}${hijri || "—"}</div>
-    `;
 
-    status.textContent = "";
-    grid.style.display = "grid";
-    meta.style.display = "block";
+// ===================== PRAYER TIMES =====================
+let prayerTimings = null;
+let countdownInterval = null;
+
+function parseTime(str) {
+  // str like "05:32" or "05:32 (EST)"
+  const match = str.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(match[1]), parseInt(match[2]), 0, 0);
+}
+
+function findNextPrayer(timings) {
+  const order = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+  const now = new Date();
+  for (const name of order) {
+    const t = parseTime(timings[name]);
+    if (t && t > now) return { name, time: t };
+  }
+  // wrap to Fajr next day
+  const fajr = parseTime(timings["Fajr"]);
+  if (fajr) {
+    fajr.setDate(fajr.getDate() + 1);
+    return { name: "Fajr", time: fajr };
+  }
+  return null;
+}
+
+function formatCountdown(ms) {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  if (h > 0) return `${h}h ${String(m).padStart(2,"0")}m`;
+  return `${m}m ${String(s).padStart(2,"0")}s`;
+}
+
+function updateCountdown() {
+  const cd = document.getElementById("prayerCountdown");
+  if (!prayerTimings) return;
+  const next = findNextPrayer(prayerTimings);
+  if (!next) { cd.classList.add("hidden"); return; }
+  const ms = next.time - new Date();
+  if (ms < 0) { cd.classList.add("hidden"); return; }
+  cd.classList.remove("hidden");
+  cd.innerHTML = `<span>⏱ Next prayer — <b>${next.name}</b></span><span class="countdown-time">${formatCountdown(ms)}</span>`;
+}
+
+function renderPrayerCards(timings) {
+  const grid = document.getElementById("prayerGpsCards");
+  const order = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
+  const next = findNextPrayer(timings);
+  const now = new Date();
+
+  grid.innerHTML = "";
+  order.forEach((name) => {
+    const t = timings[name];
+    if (!t) return;
+    const parsed = parseTime(t);
+    const isNext = next && next.name === name;
+    // Current = within 30 min after prayer start
+    const isCurrent = parsed && (now >= parsed) && ((now - parsed) < 30 * 60 * 1000);
+
+    const card = document.createElement("div");
+    card.className = `pt-card${isNext ? " is-next" : ""}${isCurrent ? " is-current" : ""}`;
+    card.innerHTML = `<div class="pt-name">${name}</div><div class="pt-time">${t}</div>`;
+    grid.appendChild(card);
+  });
+  grid.classList.remove("hidden");
+}
+
+async function loadPrayerTimes() {
+  const status = document.getElementById("prayerGpsStatus");
+  const grid   = document.getElementById("prayerGpsCards");
+  const meta   = document.getElementById("prayerGpsMeta");
+  const cd     = document.getElementById("prayerCountdown");
+
+  status.innerHTML = `<span class="spinner"></span>Loading prayer times…`;
+  status.classList.remove("hidden", "error");
+  grid.classList.add("hidden");
+  meta.classList.add("hidden");
+  cd.classList.add("hidden");
+
+  try {
+    const loc = await getLocation();
+    const s = getSettings();
+    const res = await fetch(`/api/prayer_times?lat=${loc.lat}&lng=${loc.lng}&method=${s.method}&school=${s.school}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+
+    prayerTimings = data.timings;
+    renderPrayerCards(data.timings);
+
+    // Meta row
+    let gregDate = "";
+    if (data.gregorian?.date) {
+      const [dd, mm, yyyy] = data.gregorian.date.split("-");
+      gregDate = `${mm}/${dd}/${yyyy.slice(-2)}`;
+    }
+    const cleanHijriMonth = (data.hijri?.month?.en || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    meta.innerHTML = `
+      <span><b>Timezone:</b> ${data.timezone || "—"}</span>
+      <span><b>Method:</b> ${data.method?.name || "—"}</span>
+      <span><b>Date:</b> ${gregDate || "—"} · ${data.hijri?.day || ""} ${cleanHijriMonth} ${data.hijri?.year || ""} AH</span>
+    `;
+    meta.classList.remove("hidden");
+    status.classList.add("hidden");
+
+    // Countdown
+    clearInterval(countdownInterval);
+    updateCountdown();
+    countdownInterval = setInterval(updateCountdown, 1000);
   } catch (e) {
     status.textContent = `Error: ${e.message}`;
+    status.classList.add("error");
   }
-});
-
-// ======================= QIBLA (LIVE + SAFE) =======================
-
-// DOM helpers (safe)
-function $(id) {
-  return document.getElementById(id);
 }
 
-// State
-let qiblaBearing = null; // absolute bearing to Kaaba (deg from North)
-let lastHeading = null; // device heading alpha (deg)
-let watchId = null;
-let startedQibla = false;
+document.getElementById("btnPrayerGps").addEventListener("click", loadPrayerTimes);
 
-// Normalize to 0..360
-function normalizeDeg(d) {
-  return ((d % 360) + 360) % 360;
+
+// ===================== MOSQUES =====================
+function distLabel(m) {
+  if (m.distance_m < 1000) return `${m.distance_m}m away`;
+  return `${m.distance_km} km away`;
 }
 
-// Rotate arrow (relative degrees)
+function renderMosques(mosques) {
+  const list = document.getElementById("mosqueList");
+  list.innerHTML = "";
+  mosques.forEach((m, i) => {
+    const openTag = m.open_now === true  ? `<span class="tag tag-open">Open now</span>` :
+                    m.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
+    const ratingTag = m.rating ? `<span class="tag tag-rating">★ ${m.rating}</span>` : "";
+    const card = document.createElement("div");
+    card.className = "mosque-card";
+    card.style.animationDelay = `${i * 0.05}s`;
+    card.innerHTML = `
+      <div class="mosque-rank">${i + 1}</div>
+      <div class="mosque-info">
+        <div class="mosque-name">${m.name}</div>
+        <div class="mosque-addr">${m.address || "—"}</div>
+        <div class="mosque-tags">
+          <span class="tag tag-dist">📍 ${distLabel(m)}</span>
+          ${openTag}
+          ${ratingTag}
+        </div>
+      </div>
+      <div class="mosque-actions">
+        <a href="${m.maps_directions_url}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
+        <a href="${m.maps_place_url}" target="_blank" rel="noopener" class="link-btn">Details</a>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+  list.classList.remove("hidden");
+}
+
+async function loadMosques() {
+  const status = document.getElementById("mosqueStatus");
+  const list   = document.getElementById("mosqueList");
+
+  status.innerHTML = `<span class="spinner"></span>Finding nearby mosques…`;
+  status.classList.remove("hidden", "error");
+  list.classList.add("hidden");
+
+  try {
+    const loc = await getLocation();
+    const limit = getSettings().limit;
+    const res = await fetch(`/api/nearby_mosques?lat=${loc.lat}&lng=${loc.lng}&limit=${limit}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+
+    renderMosques(data.mosques);
+    status.classList.add("hidden");
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    status.classList.add("error");
+  }
+}
+
+document.getElementById("btnFind").addEventListener("click", loadMosques);
+
+
+// ===================== QIBLA =====================
+let qiblaBearing = null;
+let lastHeading   = null;
+let watchId       = null;
+let startedQibla  = false;
+
+function normalizeDeg(d) { return ((d % 360) + 360) % 360; }
+
 function rotateArrow(deg) {
-  const el = $("qiblaArrow");
-  if (!el) return;
-  el.style.transform = `translateX(-50%) rotate(${deg}deg)`;
+  const el = document.getElementById("qiblaArrow");
+  if (el) el.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
 }
 
-// Update bearing text
-function setBearingText(value) {
-  const el = $("qiblaBearing");
-  if (!el) return;
-  if (typeof value === "number" && !Number.isNaN(value)) {
-    el.textContent = value.toFixed(1);
-  } else {
-    el.textContent = "—";
-  }
+function setBearingText(v) {
+  const el = document.getElementById("qiblaBearing");
+  if (el) el.textContent = typeof v === "number" && !isNaN(v) ? v.toFixed(1) : "—";
 }
 
-// Fetch qibla bearing from your API
 async function fetchQibla(lat, lng) {
   const res = await fetch(`/api/qibla?lat=${lat}&lng=${lng}`);
   const data = await res.json();
@@ -201,125 +318,76 @@ async function fetchQibla(lat, lng) {
   return data.bearing_deg;
 }
 
-// Use geolocation watch so it stays updated if user moves
 function startLocationWatch() {
   if (!navigator.geolocation) return;
-
-  // stop old watch if any
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-  }
-
+  if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
   watchId = navigator.geolocation.watchPosition(
     async (pos) => {
       try {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-
-        qiblaBearing = await fetchQibla(lat, lng);
+        qiblaBearing = await fetchQibla(pos.coords.latitude, pos.coords.longitude);
         setBearingText(qiblaBearing);
-
-        // If we already have heading, show relative direction immediately
-        if (typeof lastHeading === "number") {
-          const relative = normalizeDeg(qiblaBearing - lastHeading);
-          rotateArrow(relative);
-        } else {
-          // fallback (absolute)
-          rotateArrow(qiblaBearing);
-        }
-      } catch (err) {
-        console.log("Qibla fetch error:", err);
-      }
+        const rel = typeof lastHeading === "number"
+          ? normalizeDeg(qiblaBearing - lastHeading)
+          : qiblaBearing;
+        rotateArrow(rel);
+      } catch {}
     },
-    (err) => {
-      console.log("Location error:", err);
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 5000,
-      timeout: 15000,
-    }
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
   );
 }
 
-// Handle device orientation (Android & iOS differences)
 function handleOrientation(e) {
-  // Some browsers provide e.alpha (0..360 from North-ish)
-  // iOS Safari sometimes needs requestPermission + uses webkitCompassHeading
   let heading = null;
-
-  if (typeof e.webkitCompassHeading === "number") {
-    // iOS Safari: webkitCompassHeading is already "compass heading"
-    heading = e.webkitCompassHeading; // degrees from North
-  } else if (typeof e.alpha === "number") {
-    // Most browsers: alpha is rotation around z-axis
-    // Depending on device it can be inverted, but it's usable for basic compass
-    heading = e.alpha;
-  }
-
-  if (typeof heading !== "number" || Number.isNaN(heading)) return;
-
+  if (typeof e.webkitCompassHeading === "number") heading = e.webkitCompassHeading;
+  else if (typeof e.alpha === "number") heading = e.alpha;
+  if (typeof heading !== "number" || isNaN(heading)) return;
   lastHeading = normalizeDeg(heading);
-
-  // If we already know qibla bearing, show relative direction
-  if (typeof qiblaBearing === "number") {
-    const relative = normalizeDeg(qiblaBearing - lastHeading);
-    rotateArrow(relative);
-  }
+  if (typeof qiblaBearing === "number") rotateArrow(normalizeDeg(qiblaBearing - lastHeading));
 }
 
-// Start compass listeners
 function startCompass() {
-  // Some devices fire deviceorientationabsolute, others deviceorientation
   window.addEventListener("deviceorientationabsolute", handleOrientation, true);
   window.addEventListener("deviceorientation", handleOrientation, true);
 }
 
-// iPhone motion permission (required on iOS 13+ Safari)
 async function ensureMotionPermissioniOS() {
-  // If API exists, we must request permission from a user gesture
-  if (
-    typeof DeviceOrientationEvent !== "undefined" &&
-    typeof DeviceOrientationEvent.requestPermission === "function"
-  ) {
+  if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
     const perm = await DeviceOrientationEvent.requestPermission();
     if (perm !== "granted") throw new Error("Motion permission denied");
   }
 }
 
-// Main start
 async function startQiblaLive({ fromButton = false } = {}) {
   if (startedQibla) return;
   startedQibla = true;
-
   try {
-    // iOS requires this inside a click (user gesture)
-    // If we are not from button, it may fail — we'll fall back to button
     await ensureMotionPermissioniOS();
   } catch (e) {
-    // If auto-start failed (likely iPhone), allow button to do it later
-    console.log("Motion permission not granted yet (needs tap):", e.message);
+    console.log("Motion permission:", e.message);
     startedQibla = false;
     if (!fromButton) return;
   }
-
-  // Start both
   startCompass();
   startLocationWatch();
 }
 
-// ---------- SAFE BUTTON HOOK (YOUR FIX) ----------
-const qbtn = document.getElementById("btnQibla");
-if (qbtn) {
-  qbtn.addEventListener("click", async () => {
-    try {
-      await startQiblaLive({ fromButton: true });
-    } catch (e) {
-      alert(`Qibla error: ${e.message}`);
-    }
-  });
+document.getElementById("btnQibla").addEventListener("click", async () => {
+  startedQibla = false;
+  try { await startQiblaLive({ fromButton: true }); }
+  catch (e) { console.warn("Qibla error:", e.message); }
+});
+
+// Auto-start (Android works; iOS needs tap)
+startQiblaLive({ fromButton: false });
+
+
+// ===================== BOOT =====================
+async function startEverything() {
+  setHijriDate();
+  loadPrayerTimes();
+  loadMosques();
 }
 
-// Try auto-start (Android will usually work; iPhone likely requires tap)
-startQiblaLive({ fromButton: false });
+// Auto-load on page ready
+startEverything();

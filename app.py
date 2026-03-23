@@ -1,7 +1,7 @@
 import os
 import math
+import time
 import requests
-from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
@@ -13,26 +13,53 @@ GOOGLE_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 KAABA_LAT = 21.422487
 KAABA_LNG = 39.826206
 
+# Simple in-memory cache
+_cache = {}
+CACHE_TTL = 300  # 5 minutes
+
+def cache_get(key):
+    entry = _cache.get(key)
+    if entry and (time.time() - entry["ts"]) < CACHE_TTL:
+        return entry["data"]
+    return None
+
+def cache_set(key, data):
+    _cache[key] = {"ts": time.time(), "data": data}
+
 def bearing_to_kaaba(lat, lng):
     phi1 = math.radians(lat)
     phi2 = math.radians(KAABA_LAT)
     d_lambda = math.radians(KAABA_LNG - lng)
-
     y = math.sin(d_lambda) * math.cos(phi2)
     x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(d_lambda)
     brng = (math.degrees(math.atan2(y, x)) + 360) % 360
     return brng
 
+def haversine_km(lat1, lng1, lat2, lng2):
+    R = 6371
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lng2 - lng1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
 @app.route("/")
 def home():
     return render_template("index.html", app_name="UmmahMap")
 
-@app.route("/api/nearest_mosque")
-def nearest_mosque():
+@app.route("/api/nearby_mosques")
+def nearby_mosques():
     lat = request.args.get("lat", type=float)
     lng = request.args.get("lng", type=float)
+    limit = min(request.args.get("limit", default=5, type=int), 10)
+
     if not (lat and lng and GOOGLE_KEY):
         return jsonify({"error": "Missing lat/lng or GOOGLE_MAPS_API_KEY"}), 400
+
+    cache_key = f"mosques_{round(lat,3)}_{round(lng,3)}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
 
     url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
     params = {
@@ -48,16 +75,28 @@ def nearest_mosque():
     if not results:
         return jsonify({"error": "No mosques found nearby"}), 404
 
-    m = results[0]
-    mosque = {
-        "name": m.get("name"),
-        "place_id": m.get("place_id"),
-        "address": m.get("vicinity") or m.get("formatted_address", ""),
-        "lat": m["geometry"]["location"]["lat"],
-        "lng": m["geometry"]["location"]["lng"],
-        "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={m['geometry']['location']['lat']},{m['geometry']['location']['lng']}"
-    }
-    return jsonify(mosque)
+    mosques = []
+    for m in results[:limit]:
+        mlat = m["geometry"]["location"]["lat"]
+        mlng = m["geometry"]["location"]["lng"]
+        dist_km = haversine_km(lat, lng, mlat, mlng)
+        mosques.append({
+            "name": m.get("name"),
+            "place_id": m.get("place_id"),
+            "address": m.get("vicinity") or m.get("formatted_address", ""),
+            "lat": mlat,
+            "lng": mlng,
+            "distance_km": round(dist_km, 2),
+            "distance_m": round(dist_km * 1000),
+            "rating": m.get("rating"),
+            "open_now": m.get("opening_hours", {}).get("open_now"),
+            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={m.get('place_id','')}",
+            "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{m.get('place_id','')}"
+        })
+
+    payload = {"mosques": mosques, "count": len(mosques)}
+    cache_set(cache_key, payload)
+    return jsonify(payload)
 
 @app.route("/api/qibla")
 def qibla():
@@ -69,28 +108,21 @@ def qibla():
 
 @app.route("/api/prayer_times")
 def prayer_times():
-    """
-    Location-based prayer times from AlAdhan (calculated adhan times).
-    Note: Masjid iqama times can differ.
-    Query:
-      /api/prayer_times?lat=..&lng=..&method=2&school=0
-    """
     lat = request.args.get("lat", type=float)
     lng = request.args.get("lng", type=float)
-    method = request.args.get("method", default=2, type=int)  # 2 = ISNA
-    school = request.args.get("school", default=0, type=int)  # 0 = Shafi, 1 = Hanafi
+    method = request.args.get("method", default=2, type=int)
+    school = request.args.get("school", default=0, type=int)
 
     if not (lat and lng):
         return jsonify({"error": "Missing lat/lng"}), 400
 
-    url = "https://api.aladhan.com/v1/timings"
-    params = {
-        "latitude": lat,
-        "longitude": lng,
-        "method": method,
-        "school": school
-    }
+    cache_key = f"prayer_{round(lat,3)}_{round(lng,3)}_{method}_{school}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
 
+    url = "https://api.aladhan.com/v1/timings"
+    params = {"latitude": lat, "longitude": lng, "method": method, "school": school}
     r = requests.get(url, params=params, timeout=15)
     data = r.json()
 
@@ -101,7 +133,7 @@ def prayer_times():
     meta = data["data"]["meta"]
     date = data["data"]["date"]
 
-    return jsonify({
+    payload = {
         "timings": {
             "Fajr": timings.get("Fajr"),
             "Sunrise": timings.get("Sunrise"),
@@ -114,7 +146,9 @@ def prayer_times():
         "gregorian": date.get("gregorian"),
         "timezone": meta.get("timezone"),
         "method": meta.get("method")
-    })
+    }
+    cache_set(cache_key, payload)
+    return jsonify(payload)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))

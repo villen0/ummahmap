@@ -1,64 +1,154 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{{ app_name }}</title>
+  <title>UmmahMap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css" />
 </head>
-
 <body>
+
+  <!-- Settings Panel -->
+  <div id="settingsOverlay" class="overlay hidden"></div>
+  <aside id="settingsPanel" class="settings-panel hidden">
+    <div class="settings-header">
+      <h3>Settings</h3>
+      <button class="icon-btn" id="closeSettings">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="setting-group">
+        <label>Prayer Calculation Method</label>
+        <select id="settingMethod">
+          <option value="1">University of Islamic Sciences, Karachi</option>
+          <option value="2" selected>ISNA (North America)</option>
+          <option value="3">Muslim World League</option>
+          <option value="4">Umm Al-Qura, Makkah</option>
+          <option value="5">Egyptian General Authority</option>
+          <option value="7">Institute of Geophysics, Tehran</option>
+          <option value="8">Gulf Region</option>
+          <option value="9">Kuwait</option>
+          <option value="10">Qatar</option>
+          <option value="11">Majlis Ugama Islam Singapura</option>
+          <option value="15">Diyanet İşleri Başkanlığı, Turkey</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Asr Juristic School</label>
+        <select id="settingSchool">
+          <option value="0">Shafi'i / Maliki / Hanbali (Standard)</option>
+          <option value="1">Hanafi (Later time)</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Mosques to Show</label>
+        <select id="settingLimit">
+          <option value="3">3 nearest</option>
+          <option value="5" selected>5 nearest</option>
+          <option value="8">8 nearest</option>
+          <option value="10">10 nearest</option>
+        </select>
+      </div>
+      <button class="btn-primary full-width" id="applySettings">Apply & Refresh</button>
+    </div>
+  </aside>
+
+  <!-- Header -->
   <header class="header">
-    <div class="brand">
-      <div class="logo">🕌</div>
+    <div class="header-left">
+      <div class="brand-mark">🕌</div>
       <div>
-        <div class="title">{{ app_name }}</div>
-        <div class="sub" id="hijriDate"></div>
+        <div class="brand-name">UmmahMap</div>
+        <div class="hijri-date" id="hijriDate">Loading date…</div>
       </div>
     </div>
-    <div class="quote" id="quote"></div>
+    <div class="header-right">
+      <div class="quote-wrap" id="quoteWrap">
+        <div class="quote-text" id="quote"></div>
+      </div>
+      <button class="icon-btn settings-btn" id="openSettings" title="Settings">⚙️</button>
+    </div>
   </header>
 
-  <main class="container">
-    <section class="card">
-      <h2>Nearest Mosque</h2>
-      <div id="mosqueBox" class="muted">Tap “Find Nearest Mosque”</div>
-      <div class="actions">
-        <button id="btnFind">Find Nearest Mosque</button>
-        <a id="btnDirections" class="btnLink" target="_blank" rel="noopener" style="display:none;">Open Directions</a>
-      </div>
-    </section>
+  <!-- Main -->
+  <main class="main">
 
-    <section class="card">
-      <h2>Prayer Times (by GPS)</h2>
-      <div class="muted">Calculated for your current location (adhan times). Masjid iqama times may differ.</div>
-      <div class="actions">
-        <button id="btnPrayerGps">Get Prayer Times (GPS)</button>
-      </div>
-      
-      <div id="prayerGpsStatus" class="status muted"></div>
-      <div id="prayerGpsCards" class="ptGrid" style="display:none;"></div>
-      <div id="prayerGpsMeta" class="meta muted" style="display:none;"></div>
-
-    </section>
-
-    <section class="card">
-      <h2>Qibla</h2>
-      <div class="qiblaWrap">
-        <div class="compass">
-          <div class="arrow" id="qiblaArrow"></div>
-          <div class="north">N</div>
+    <!-- Prayer Times -->
+    <section class="card" id="sectionPrayer">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🌙</span>
+          Prayer Times
         </div>
-        <div class="qiblaInfo">
-          <div><b>Bearing:</b> <span id="qiblaBearing">—</span>°</div>
-          <div class="muted">Allow location. If your phone supports a compass, the arrow will point relative to your heading.</div>
+        <button class="btn-ghost" id="btnPrayerGps">
+          <span class="btn-icon">📍</span> Get by GPS
+        </button>
+      </div>
+      <div id="prayerGpsStatus" class="status-msg hidden"></div>
+      <div id="prayerCountdown" class="countdown hidden"></div>
+      <div id="prayerGpsCards" class="prayer-grid hidden"></div>
+      <div id="prayerGpsMeta" class="meta-row hidden"></div>
+    </section>
+
+    <!-- Mosques -->
+    <section class="card" id="sectionMosque">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🕌</span>
+          Nearby Mosques
+        </div>
+        <button class="btn-ghost" id="btnFind">
+          <span class="btn-icon">🔍</span> Find Mosques
+        </button>
+      </div>
+      <div id="mosqueStatus" class="status-msg hidden"></div>
+      <div id="mosqueList" class="mosque-list hidden"></div>
+    </section>
+
+    <!-- Qibla -->
+    <section class="card" id="sectionQibla">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🧭</span>
+          Qibla Direction
+        </div>
+        <button class="btn-ghost" id="btnQibla">
+          <span class="btn-icon">🔄</span> Update
+        </button>
+      </div>
+      <div class="qibla-body">
+        <div class="compass-wrap">
+          <div class="compass-ring">
+            <div class="compass-labels">
+              <span class="cn">N</span>
+              <span class="ce">E</span>
+              <span class="cs">S</span>
+              <span class="cw">W</span>
+            </div>
+            <div class="compass-needle" id="qiblaArrow">
+              <div class="needle-tip"></div>
+              <div class="needle-base"></div>
+            </div>
+            <div class="compass-kaaba">🕋</div>
+          </div>
+        </div>
+        <div class="qibla-info">
+          <div class="bearing-display">
+            <span id="qiblaBearing">—</span>°
+            <span class="bearing-label">from North</span>
+          </div>
+          <p class="qibla-hint">Allow location access. On mobile with a compass, the arrow tracks your heading live.</p>
         </div>
       </div>
-      <div class="actions">
-        <button id="btnQibla">Update Qibla</button>
-      </div>
     </section>
+
   </main>
+
+  <footer class="footer">
+    <span>Prayer times via AlAdhan · Mosques via Google Places</span>
+  </footer>
 
   <script src="/static/app.js" defer></script>
 </body>
