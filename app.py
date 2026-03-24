@@ -98,6 +98,61 @@ def nearby_mosques():
     cache_set(cache_key, payload)
     return jsonify(payload)
 
+@app.route("/api/halal_restaurants")
+def halal_restaurants():
+    lat = request.args.get("lat", type=float)
+    lng = request.args.get("lng", type=float)
+    limit = min(request.args.get("limit", default=5, type=int), 10)
+
+    if not (lat and lng and GOOGLE_KEY):
+        return jsonify({"error": "Missing lat/lng or GOOGLE_MAPS_API_KEY"}), 400
+
+    cache_key = f"halal_{round(lat,3)}_{round(lng,3)}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
+
+    url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+    params = {
+        "key": GOOGLE_KEY,
+        "location": f"{lat},{lng}",
+        "rankby": "distance",
+        "type": "restaurant",
+        "keyword": "halal"
+    }
+    r = requests.get(url, params=params, timeout=15)
+    data = r.json()
+
+    results = data.get("results", [])
+    if not results:
+        return jsonify({"error": "No halal restaurants found nearby"}), 404
+
+    restaurants = []
+    for m in results[:limit]:
+        mlat = m["geometry"]["location"]["lat"]
+        mlng = m["geometry"]["location"]["lng"]
+        dist_km = haversine_km(lat, lng, mlat, mlng)
+        restaurants.append({
+            "name": m.get("name"),
+            "place_id": m.get("place_id"),
+            "address": m.get("vicinity") or m.get("formatted_address", ""),
+            "lat": mlat,
+            "lng": mlng,
+            "distance_km": round(dist_km, 2),
+            "distance_m": round(dist_km * 1000),
+            "rating": m.get("rating"),
+            "user_ratings_total": m.get("user_ratings_total"),
+            "price_level": m.get("price_level"),
+            "open_now": m.get("opening_hours", {}).get("open_now"),
+            "types": m.get("types", []),
+            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={m.get('place_id','')}",
+            "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{m.get('place_id','')}"
+        })
+
+    payload = {"restaurants": restaurants, "count": len(restaurants)}
+    cache_set(cache_key, payload)
+    return jsonify(payload)
+
 @app.route("/api/qibla")
 def qibla():
     lat = request.args.get("lat", type=float)
