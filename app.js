@@ -394,14 +394,125 @@ startEverything();
 
 
 // ===================== QURAN =====================
-let quranSearchVisible = false;
+let surahsData = [];
+let surahsLoaded = false;
+let currentSurah = null;
+let ayahOffset = 0;
+const AYAHS_PER_LOAD = 20;
 
-document.getElementById("btnQuranSearch").addEventListener("click", () => {
-  quranSearchVisible = !quranSearchVisible;
-  document.getElementById("quranSearchRow").classList.toggle("hidden", !quranSearchVisible);
-  if (quranSearchVisible) document.getElementById("quranSearchInput").focus();
+// Toggle search bar
+document.getElementById("btnQuranToggleSearch").addEventListener("click", () => {
+  const row = document.getElementById("quranSearchRow");
+  row.classList.toggle("hidden");
+  if (!row.classList.contains("hidden")) document.getElementById("quranSearchInput").focus();
 });
 
+// Toggle surah list
+document.getElementById("btnToggleSurahList").addEventListener("click", async () => {
+  const wrap = document.getElementById("surahListWrap");
+  const btn  = document.getElementById("btnToggleSurahList");
+  if (wrap.classList.contains("hidden")) {
+    if (!surahsLoaded) await loadSurahList();
+    wrap.classList.remove("hidden");
+    btn.textContent = "Hide surahs ▴";
+  } else {
+    wrap.classList.add("hidden");
+    btn.textContent = "Show all surahs ▾";
+  }
+});
+
+async function loadSurahList() {
+  surahsLoaded = true;
+  const wrap = document.getElementById("surahListWrap");
+  wrap.innerHTML = '<span style="color:var(--text3);font-size:13px;padding:8px"><span class="spinner"></span>Loading…</span>';
+  try {
+    const res  = await fetch("https://api.alquran.cloud/v1/surah");
+    const data = await res.json();
+    surahsData  = data.data;
+    wrap.innerHTML = "";
+    surahsData.forEach(s => {
+      const btn = document.createElement("button");
+      btn.className = "surah-item";
+      btn.innerHTML = `
+        <div class="surah-num-badge">${s.number}</div>
+        <div class="surah-item-info">
+          <div class="surah-item-en">${s.englishName} <span style="color:var(--text3);font-size:11.5px">${s.englishNameTranslation}</span></div>
+          <div class="surah-item-meta">${s.numberOfAyahs} verses · ${s.revelationType}</div>
+        </div>
+        <div class="surah-item-ar">${s.name}</div>`;
+      btn.addEventListener("click", () => openSurah(s));
+      wrap.appendChild(btn);
+    });
+  } catch {
+    wrap.innerHTML = '<span style="color:var(--red);font-size:13px;padding:8px">Failed to load. Check connection.</span>';
+  }
+}
+
+async function openSurah(surah) {
+  currentSurah = surah;
+  ayahOffset   = 0;
+  // Hide single-verse result
+  document.getElementById("quranResult").classList.add("hidden");
+  document.getElementById("quranStatus").classList.add("hidden");
+  // Show reader
+  const reader = document.getElementById("quranReader");
+  reader.classList.remove("hidden");
+  document.getElementById("quranReaderHeader").innerHTML = `
+    <span class="qr-ar">${surah.name}</span>
+    <div class="qr-en">${surah.englishName} — ${surah.englishNameTranslation}</div>
+    <div class="qr-meta">${surah.numberOfAyahs} verses · ${surah.revelationType}</div>`;
+  document.getElementById("quranReaderAyahs").innerHTML = "";
+  document.getElementById("btnLoadMoreAyahs").classList.add("hidden");
+  // Scroll to reader
+  reader.scrollIntoView({ behavior: "smooth", block: "start" });
+  await loadMoreAyahs();
+}
+
+async function loadMoreAyahs() {
+  const surah = currentSurah;
+  const offset = ayahOffset;
+  const btn = document.getElementById("btnLoadMoreAyahs");
+  btn.innerHTML = '<span class="spinner"></span> Loading…';
+  btn.disabled = true;
+
+  try {
+    const [arRes, enRes] = await Promise.all([
+      fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
+      fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`)
+    ]);
+    const arData = await arRes.json();
+    const enData = await enRes.json();
+    const arAyahs = arData.data.ayahs;
+    const enAyahs = enData.data?.ayahs || [];
+    const container = document.getElementById("quranReaderAyahs");
+    const end = Math.min(offset + AYAHS_PER_LOAD, arAyahs.length);
+    for (let i = offset; i < end; i++) {
+      const block = document.createElement("div");
+      block.className = "ayah-block";
+      block.style.animationDelay = `${(i - offset) * 0.03}s`;
+      block.innerHTML = `
+        <div class="ayah-arabic">${arAyahs[i].text} <span class="ayah-num">${arAyahs[i].numberInSurah}</span></div>
+        <div class="ayah-translation">${enAyahs[i]?.text || ""}</div>`;
+      container.appendChild(block);
+    }
+    ayahOffset = end;
+    if (ayahOffset < surah.numberOfAyahs) {
+      btn.innerHTML = `Load more verses (${ayahOffset}/${surah.numberOfAyahs}) ▾`;
+      btn.disabled = false;
+      btn.classList.remove("hidden");
+    } else {
+      btn.classList.add("hidden");
+    }
+  } catch {
+    btn.innerHTML = "Failed to load. Tap to retry.";
+    btn.disabled = false;
+    btn.classList.remove("hidden");
+  }
+}
+
+document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAyahs);
+
+// Random verse
 document.getElementById("btnQuranRandom").addEventListener("click", fetchRandomVerse);
 document.getElementById("btnQuranGo").addEventListener("click", handleQuranSearch);
 document.getElementById("quranSearchInput").addEventListener("keydown", e => {
@@ -413,213 +524,198 @@ async function handleQuranSearch() {
   if (!input) return;
   const colonMatch = input.match(/^(\d+):(\d+)$/);
   if (colonMatch) {
-    await fetchVerse(parseInt(colonMatch[1]), parseInt(colonMatch[2]));
+    await fetchSingleVerse(parseInt(colonMatch[1]), parseInt(colonMatch[2]));
   } else {
-    await fetchVerseBySearch(input);
+    await fetchVerseByKeyword(input);
   }
 }
 
-function showQuranStatus(msg, isError = false) {
+function showQuranStatus(msg, isErr = false) {
   const el = document.getElementById("quranStatus");
   el.textContent = msg;
-  el.className = "status-msg" + (isError ? " error" : "");
+  el.className = "status-msg" + (isErr ? " error" : "");
   el.classList.remove("hidden");
   document.getElementById("quranResult").classList.add("hidden");
+  document.getElementById("quranReader").classList.add("hidden");
 }
 
-function hideQuranStatus() {
-  document.getElementById("quranStatus").classList.add("hidden");
-}
-
-async function fetchVerse(surah, ayah) {
+async function fetchSingleVerse(surah, ayah) {
   showQuranStatus("Loading verse…");
   try {
     const [arRes, enRes] = await Promise.all([
       fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/ar.alafasy`),
-      fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/en.asad`)
+      fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/en.sahih`)
     ]);
     const arData = await arRes.json();
     const enData = await enRes.json();
-    if (arData.code !== 200) throw new Error("Verse not found");
-    hideQuranStatus();
-    renderVerse(arData.data, enData.data);
-  } catch (e) {
-    showQuranStatus("Could not load verse. Check the reference.", true);
+    if (arData.code !== 200) throw new Error();
+    document.getElementById("quranStatus").classList.add("hidden");
+    renderSingleVerse(arData.data, enData.data);
+  } catch {
+    showQuranStatus("Verse not found. Try e.g. 2:255", true);
+  }
+}
+
+async function fetchVerseByKeyword(query) {
+  showQuranStatus("Searching…");
+  try {
+    const res  = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(query)}/all/en.sahih`);
+    const data = await res.json();
+    if (data.code !== 200 || !data.data?.matches?.length) throw new Error();
+    const m = data.data.matches[0];
+    await fetchSingleVerse(m.surah.number, m.numberInSurah);
+  } catch {
+    showQuranStatus("No results found. Try a different keyword.", true);
   }
 }
 
 async function fetchRandomVerse() {
+  document.getElementById("quranReader").classList.add("hidden");
   showQuranStatus("Loading random verse…");
   try {
-    const randomSurah = Math.floor(Math.random() * 114) + 1;
-    const surahRes = await fetch(`https://api.alquran.cloud/v1/surah/${randomSurah}`);
-    const surahData = await surahRes.json();
-    const totalAyahs = surahData.data.numberOfAyahs;
-    const randomAyah = Math.floor(Math.random() * totalAyahs) + 1;
-    await fetchVerse(randomSurah, randomAyah);
-  } catch (e) {
+    const sRes  = await fetch(`https://api.alquran.cloud/v1/surah/${Math.floor(Math.random()*114)+1}`);
+    const sData = await sRes.json();
+    const total = sData.data.numberOfAyahs;
+    await fetchSingleVerse(sData.data.number, Math.floor(Math.random()*total)+1);
+  } catch {
     showQuranStatus("Could not load verse. Try again.", true);
   }
 }
 
-async function fetchVerseBySearch(query) {
-  showQuranStatus("Searching…");
-  try {
-    const res = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(query)}/all/en.asad`);
-    const data = await res.json();
-    if (data.code !== 200 || !data.data?.matches?.length) {
-      showQuranStatus("No verses found for that search.", true);
-      return;
-    }
-    const match = data.data.matches[0];
-    await fetchVerse(match.surah.number, match.numberInSurah);
-  } catch (e) {
-    showQuranStatus("Search failed. Try again.", true);
-  }
-}
-
-function renderVerse(arData, enData) {
-  document.getElementById("quranArabic").textContent = arData.text;
-  document.getElementById("quranTranslation").textContent = `"${enData?.text || ""}"`;
+function renderSingleVerse(ar, en) {
+  document.getElementById("quranArabic").textContent = ar.text;
+  document.getElementById("quranTranslation").textContent = `"${en?.text || ""}"`;
   document.getElementById("quranMeta").innerHTML = `
-    <span>📖 Surah ${arData.surah.englishName} (${arData.surah.number})</span>
-    <span>Verse ${arData.numberInSurah}</span>
-    <span>${arData.surah.revelationType}</span>
-  `;
+    <span>📖 ${ar.surah.englishName} (${ar.surah.number}:${ar.numberInSurah})</span>
+    <span>${ar.surah.revelationType}</span>`;
   document.getElementById("quranResult").classList.remove("hidden");
 }
 
-// Load a verse on page load
+// Load a random verse on boot
 fetchRandomVerse();
 
 
 // ===================== HADITH =====================
-const HADITH_MAX = {
-  bukhari: 7563, muslim: 3033, abudawud: 5274, tirmidhi: 3956, ibnmajah: 4341
-};
+const HADITH_MAX = { bukhari:7563, muslim:3033, abudawud:5274, tirmidhi:3956, ibnmajah:4341, nasai:5761 };
+const COLL_NAMES = { bukhari:"Sahih al-Bukhari", muslim:"Sahih Muslim", abudawud:"Sunan Abu Dawud", tirmidhi:"Jami' at-Tirmidhi", ibnmajah:"Sunan Ibn Majah", nasai:"Sunan an-Nasa'i" };
 
 document.getElementById("btnHadithRandom").addEventListener("click", fetchRandomHadith);
+document.getElementById("btnHadithGo").addEventListener("click", () => {
+  const num = parseInt(document.getElementById("hadithNumber").value);
+  if (num > 0) fetchHadith(document.getElementById("hadithCollection").value, num);
+});
+document.getElementById("hadithNumber").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("btnHadithGo").click();
+});
 
-function showHadithStatus(msg, isError = false) {
+function showHadithStatus(msg, isErr = false) {
   const el = document.getElementById("hadithStatus");
   el.textContent = msg;
-  el.className = "status-msg" + (isError ? " error" : "");
+  el.className = "status-msg" + (isErr ? " error" : "");
   el.classList.remove("hidden");
   document.getElementById("hadithResult").classList.add("hidden");
 }
 
-function hideHadithStatus() {
-  document.getElementById("hadithStatus").classList.add("hidden");
+async function fetchRandomHadith() {
+  const col = document.getElementById("hadithCollection").value;
+  await fetchHadith(col, Math.floor(Math.random() * (HADITH_MAX[col] || 3000)) + 1);
 }
 
-async function fetchRandomHadith() {
-  const collection = document.getElementById("hadithCollection").value;
-  const max = HADITH_MAX[collection] || 3000;
-  const num = Math.floor(Math.random() * max) + 1;
+async function fetchHadith(collection, num) {
   showHadithStatus("Loading hadith…");
   try {
     const res = await fetch(`https://hadith-api.vercel.app/api/hadith/${collection}/${num}`);
     if (!res.ok) throw new Error();
     const data = await res.json();
-    hideHadithStatus();
+    document.getElementById("hadithStatus").classList.add("hidden");
     renderHadith(data, collection, num);
-  } catch (e) {
-    // Try a fallback: different random number
+  } catch {
+    // fallback random small number
     try {
-      const num2 = Math.floor(Math.random() * 500) + 1;
-      const res2 = await fetch(`https://hadith-api.vercel.app/api/hadith/${collection}/${num2}`);
-      if (!res2.ok) throw new Error();
-      const data2 = await res2.json();
-      hideHadithStatus();
-      renderHadith(data2, collection, num2);
+      const n2  = Math.floor(Math.random() * 300) + 1;
+      const r2  = await fetch(`https://hadith-api.vercel.app/api/hadith/${collection}/${n2}`);
+      if (!r2.ok) throw new Error();
+      const d2  = await r2.json();
+      document.getElementById("hadithStatus").classList.add("hidden");
+      renderHadith(d2, collection, n2);
     } catch {
-      showHadithStatus("Could not load hadith. Try again.", true);
+      showHadithStatus("Could not load hadith. Try again or pick a different number.", true);
     }
   }
 }
 
 function renderHadith(data, collection, num) {
-  const collectionNames = {
-    bukhari: "Sahih al-Bukhari", muslim: "Sahih Muslim",
-    abudawud: "Sunan Abu Dawud", tirmidhi: "Jami' at-Tirmidhi", ibnmajah: "Sunan Ibn Majah"
-  };
-  const text = data.hadith_english || data.text || data.body || "Text unavailable.";
-  const grade = data.grade || "";
-  const gradeClass = grade.toLowerCase().includes("sahih") ? "hadith-grade-sahih"
-                   : grade.toLowerCase().includes("hasan") ? "hadith-grade-hasan" : "";
-  document.getElementById("hadithText").textContent = text;
-  document.getElementById("hadithMeta").innerHTML = `
-    <span class="tag">${collectionNames[collection] || collection}</span>
-    <span class="tag">#${num}</span>
-    ${grade ? `<span class="tag ${gradeClass}">${grade}</span>` : ""}
-  `;
+  const text  = data.hadith_english || data.text || data.body || "Text unavailable.";
+  const grade = (data.grade || "").trim();
+  const chapter = data.chapter_english || data.chapter || "";
+  document.getElementById("hadithLabel").textContent = `${COLL_NAMES[collection]} · #${num}`;
+  document.getElementById("hadithBody").textContent = text;
+  document.getElementById("hadithRef").textContent = `${COLL_NAMES[collection]}, Hadith ${num}`;
+  const gEl = document.getElementById("hadithGrade");
+  gEl.textContent = grade;
+  gEl.className = "hadith-grade";
+  if (grade.toLowerCase().includes("sahih")) gEl.classList.add("sahih");
+  else if (grade.toLowerCase().includes("hasan")) gEl.classList.add("hasan");
+  else if (grade.toLowerCase().includes("da'if") || grade.toLowerCase().includes("daif")) gEl.classList.add("daif");
+  document.getElementById("hadithChapter").textContent = chapter ? `Chapter: ${chapter}` : "";
   document.getElementById("hadithResult").classList.remove("hidden");
 }
 
-// Load on page load
+// Load on boot
 fetchRandomHadith();
 
 
 // ===================== HALAL RESTAURANTS =====================
-document.getElementById("btnFindHalal").addEventListener("click", findHalalRestaurants);
+document.getElementById("btnFindHalal").addEventListener("click", loadHalalRestaurants);
 
-function showHalalStatus(msg, isError = false) {
-  const el = document.getElementById("halalStatus");
-  el.textContent = msg;
-  el.className = "status-msg" + (isError ? " error" : "");
-  el.classList.remove("hidden");
-  document.getElementById("halalList").classList.add("hidden");
-}
-
-function hideHalalStatus() {
-  document.getElementById("halalStatus").classList.add("hidden");
-}
-
-async function findHalalRestaurants() {
-  showHalalStatus("⏳ Getting your location…");
-  try {
-    const loc = await getLocation();
-    showHalalStatus("🍽️ Finding halal restaurants nearby…");
-    const s = getSettings();
-    const res = await fetch(`/api/halal_restaurants?lat=${loc.lat}&lng=${loc.lng}&limit=${s.limit}`);
-    const data = await res.json();
-    if (!res.ok || data.error) throw new Error(data.error || "Failed");
-    hideHalalStatus();
-    renderHalalRestaurants(data.restaurants);
-  } catch (e) {
-    showHalalStatus("⚠️ " + (e.message || "Could not find halal restaurants."), true);
-  }
-}
-
-const PRICE_LABELS = ["", "$", "$$", "$$$", "$$$$"];
-
-function renderHalalRestaurants(restaurants) {
+function renderHalal(restaurants) {
   const list = document.getElementById("halalList");
   list.innerHTML = "";
+  const PRICE = ["","$","$$","$$$","$$$$"];
   restaurants.forEach((r, i) => {
-    const openTag = r.open_now === true ? `<span class="tag tag-open">Open</span>`
-                  : r.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
-    const ratingTag = r.rating ? `<span class="tag tag-rating">★ ${r.rating}${r.user_ratings_total ? ` (${r.user_ratings_total})` : ""}</span>` : "";
-    const priceTag = r.price_level ? `<span class="tag tag-dist">${PRICE_LABELS[r.price_level]}</span>` : "";
-    const distTag = r.distance_m < 1000
-      ? `<span class="tag tag-dist">${r.distance_m}m away</span>`
-      : `<span class="tag tag-dist">${r.distance_km}km away</span>`;
+    const openTag   = r.open_now === true  ? `<span class="tag tag-open">Open now</span>`
+                    : r.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
+    const ratingTag = r.rating ? `<span class="tag tag-rating">★ ${r.rating}</span>` : "";
+    const priceTag  = r.price_level ? `<span class="tag tag-dist">${PRICE[r.price_level]}</span>` : "";
+    const dist      = r.distance_m < 1000 ? `${r.distance_m}m away` : `${r.distance_km} km away`;
     const card = document.createElement("div");
     card.className = "mosque-card";
-    card.style.animationDelay = `${i * 0.06}s`;
+    card.style.animationDelay = `${i * 0.05}s`;
     card.innerHTML = `
       <div class="mosque-rank">${i + 1}</div>
       <div class="mosque-info">
         <div class="mosque-name">${r.name}</div>
-        <div class="mosque-addr">${r.address}</div>
-        <div class="mosque-tags">${distTag}${openTag}${ratingTag}${priceTag}</div>
+        <div class="mosque-addr">${r.address || "—"}</div>
+        <div class="mosque-tags">
+          <span class="tag tag-dist">📍 ${dist}</span>
+          ${openTag}${ratingTag}${priceTag}
+        </div>
       </div>
       <div class="mosque-actions">
-        <a href="${r.maps_directions_url}" target="_blank" rel="noopener" class="link-btn primary">🗺️ Directions</a>
-        <a href="${r.maps_place_url}" target="_blank" rel="noopener" class="link-btn">ℹ️ Details</a>
-      </div>
-    `;
+        <a href="${r.maps_directions_url}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
+        <a href="${r.maps_place_url}" target="_blank" rel="noopener" class="link-btn">Details</a>
+      </div>`;
     list.appendChild(card);
   });
   list.classList.remove("hidden");
+}
+
+async function loadHalalRestaurants() {
+  const status = document.getElementById("halalStatus");
+  const list   = document.getElementById("halalList");
+  status.innerHTML = `<span class="spinner"></span>Finding halal restaurants…`;
+  status.classList.remove("hidden", "error");
+  list.classList.add("hidden");
+  try {
+    const loc   = await getLocation();
+    const limit = getSettings().limit;
+    const res   = await fetch(`/api/halal_restaurants?lat=${loc.lat}&lng=${loc.lng}&limit=${limit}`);
+    const data  = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+    renderHalal(data.restaurants);
+    status.classList.add("hidden");
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    status.classList.add("error");
+  }
 }
