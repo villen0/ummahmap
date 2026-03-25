@@ -6,246 +6,12 @@
   <title>UmmahMap</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
 
-  <!-- ===== APP SHELL ===== -->
-  <div id="app">
-
-    <!-- HOME PAGE -->
-    <div id="pageHome" class="page active">
-      <header class="home-header">
-        <div class="home-brand">
-          <div class="brand-emblem">🕌</div>
-          <div>
-            <div class="brand-title">UmmahMap</div>
-            <div class="brand-hijri" id="hijriDate">Loading…</div>
-          </div>
-        </div>
-        <button class="icon-btn" id="openSettings" title="Settings">⚙️</button>
-      </header>
-
-      <div class="home-hero">
-        <div class="hero-quote" id="heroQuote"></div>
-      </div>
-
-      <nav class="feature-list">
-        <button class="feature-row" data-page="pagePrayer">
-          <div class="feature-icon-wrap" style="background:linear-gradient(135deg,#1a3a5c,#2d6a9f)">🌙</div>
-          <div class="feature-text">
-            <div class="feature-name">Prayer Times</div>
-            <div class="feature-desc">Daily salah schedule by GPS</div>
-          </div>
-          <div class="feature-chevron">›</div>
-        </button>
-        <button class="feature-row" data-page="pageQuran">
-          <div class="feature-icon-wrap" style="background:linear-gradient(135deg,#1a4a2e,#2d8a52)">📖</div>
-          <div class="feature-text">
-            <div class="feature-name">Quran</div>
-            <div class="feature-desc">Read full Quran with translation</div>
-          </div>
-          <div class="feature-chevron">›</div>
-        </button>
-        <button class="feature-row" data-page="pageHadith">
-          <div class="feature-icon-wrap" style="background:linear-gradient(135deg,#3a2a0a,#8a6a1a)">📜</div>
-          <div class="feature-text">
-            <div class="feature-name">Hadith</div>
-            <div class="feature-desc">Authentic hadith collections</div>
-          </div>
-          <div class="feature-chevron">›</div>
-        </button>
-        <button class="feature-row" data-page="pageMosque">
-          <div class="feature-icon-wrap" style="background:linear-gradient(135deg,#2a1a4a,#6a3a9a)">🕌</div>
-          <div class="feature-text">
-            <div class="feature-name">Nearby Mosques</div>
-            <div class="feature-desc">Find mosques close to you</div>
-          </div>
-          <div class="feature-chevron">›</div>
-        </button>
-        <button class="feature-row" data-page="pageQibla">
-          <div class="feature-icon-wrap" style="background:linear-gradient(135deg,#1a3a3a,#2a8a8a)">🧭</div>
-          <div class="feature-text">
-            <div class="feature-name">Qibla Direction</div>
-            <div class="feature-desc">Live compass toward the Kaaba</div>
-          </div>
-          <div class="feature-chevron">›</div>
-        </button>
-        <button class="feature-row" data-page="pageHalal">
-          <div class="feature-icon-wrap" style="background:linear-gradient(135deg,#3a1a1a,#9a3a2a)">🍽️</div>
-          <div class="feature-text">
-            <div class="feature-name">Halal Restaurants</div>
-            <div class="feature-desc">Certified halal food near you</div>
-          </div>
-          <div class="feature-chevron">›</div>
-        </button>
-      </nav>
-
-      <footer class="home-footer">
-        Prayer · Quran · Hadith · Mosques · Qibla · Halal
-      </footer>
-    </div>
-
-    <!-- ===== PRAYER TIMES PAGE ===== -->
-    <div id="pagePrayer" class="page">
-      <div class="page-header">
-        <button class="back-btn" data-back>‹</button>
-        <div class="page-title">🌙 Prayer Times</div>
-        <div style="width:36px"></div>
-      </div>
-      <div class="page-body">
-        <button class="action-btn" id="btnPrayerGps">📍 Get Prayer Times by GPS</button>
-        <div id="prayerStatus" class="status-msg hidden"></div>
-        <div id="prayerCountdown" class="countdown hidden"></div>
-        <div id="prayerGrid" class="prayer-grid hidden"></div>
-        <div id="prayerMeta" class="meta-row hidden"></div>
-      </div>
-    </div>
-
-    <!-- ===== QURAN PAGE ===== -->
-    <div id="pageQuran" class="page">
-      <div class="page-header">
-        <button class="back-btn" data-back>‹</button>
-        <div class="page-title">📖 Quran</div>
-        <div style="width:36px"></div>
-      </div>
-      <div class="page-body">
-        <!-- Surah list / reader toggle -->
-        <div class="quran-tabs">
-          <button class="qtab active" data-qtab="browse">Browse Surahs</button>
-          <button class="qtab" data-qtab="search">Search</button>
-          <button class="qtab" data-qtab="read">Read</button>
-        </div>
-
-        <!-- Browse tab -->
-        <div id="qtabBrowse" class="qtab-panel">
-          <div class="surah-grid" id="surahGrid">
-            <div class="loading-spinner-wrap"><span class="spinner"></span> Loading surahs…</div>
-          </div>
-        </div>
-
-        <!-- Search tab -->
-        <div id="qtabSearch" class="qtab-panel hidden">
-          <div class="search-row">
-            <input type="text" id="quranSearchInput" class="search-input" placeholder="Search keyword or enter Surah:Ayah (e.g. 2:255)" />
-            <button class="btn-gold" id="btnQuranSearch">Search</button>
-          </div>
-          <div id="quranSearchStatus" class="status-msg hidden"></div>
-          <div id="quranSearchResults" class="verse-list hidden"></div>
-        </div>
-
-        <!-- Read tab -->
-        <div id="qtabRead" class="qtab-panel hidden">
-          <div id="quranReadStatus" class="status-msg hidden"></div>
-          <div id="quranReadContent" class="quran-reader"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== HADITH PAGE ===== -->
-    <div id="pageHadith" class="page">
-      <div class="page-header">
-        <button class="back-btn" data-back>‹</button>
-        <div class="page-title">📜 Hadith</div>
-        <div style="width:36px"></div>
-      </div>
-      <div class="page-body">
-        <div class="hadith-controls">
-          <select id="hadithCollection" class="select-input">
-            <option value="bukhari">Sahih al-Bukhari</option>
-            <option value="muslim">Sahih Muslim</option>
-            <option value="abudawud">Sunan Abu Dawud</option>
-            <option value="tirmidhi">Jami' at-Tirmidhi</option>
-            <option value="ibnmajah">Sunan Ibn Majah</option>
-            <option value="nasai">Sunan an-Nasa'i</option>
-          </select>
-          <div class="hadith-nav">
-            <input type="number" id="hadithNumber" class="num-input" placeholder="# (e.g. 1)" min="1" />
-            <button class="btn-gold" id="btnHadithGo">Go</button>
-            <button class="btn-outline" id="btnHadithRandom">Random</button>
-          </div>
-        </div>
-        <div id="hadithStatus" class="status-msg hidden"></div>
-        <div id="hadithResult" class="hadith-card hidden">
-          <div class="hadith-collection-tag" id="hadithCollectionTag"></div>
-          <div class="hadith-body" id="hadithBody"></div>
-          <div class="hadith-footer-row">
-            <span class="hadith-ref" id="hadithRef"></span>
-            <span class="hadith-grade" id="hadithGrade"></span>
-          </div>
-          <div class="hadith-chapter" id="hadithChapter"></div>
-        </div>
-        <div class="hadith-browse" id="hadithBrowse">
-          <div class="browse-hint">Select a collection and tap <strong>Random</strong> to discover a hadith, or enter a number to go directly.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== MOSQUES PAGE ===== -->
-    <div id="pageMosque" class="page">
-      <div class="page-header">
-        <button class="back-btn" data-back>‹</button>
-        <div class="page-title">🕌 Nearby Mosques</div>
-        <div style="width:36px"></div>
-      </div>
-      <div class="page-body">
-        <button class="action-btn" id="btnFindMosques">📍 Find Mosques Near Me</button>
-        <div id="mosqueStatus" class="status-msg hidden"></div>
-        <div id="mosqueList" class="place-list hidden"></div>
-      </div>
-    </div>
-
-    <!-- ===== QIBLA PAGE ===== -->
-    <div id="pageQibla" class="page">
-      <div class="page-header">
-        <button class="back-btn" data-back>‹</button>
-        <div class="page-title">🧭 Qibla Direction</div>
-        <div style="width:36px"></div>
-      </div>
-      <div class="page-body qibla-page-body">
-        <div class="compass-container">
-          <div class="compass-ring">
-            <div class="compass-labels">
-              <span class="cn">N</span>
-              <span class="ce">E</span>
-              <span class="cs">S</span>
-              <span class="cw">W</span>
-            </div>
-            <div class="compass-needle" id="qiblaArrow">
-              <div class="needle-tip"></div>
-              <div class="needle-base"></div>
-            </div>
-            <div class="compass-kaaba">🕋</div>
-          </div>
-        </div>
-        <div class="qibla-info-panel">
-          <div class="bearing-big"><span id="qiblaBearing">—</span>°</div>
-          <div class="bearing-sub">from North toward Makkah</div>
-          <button class="action-btn" id="btnQiblaGps" style="margin-top:20px">📍 Get My Qibla</button>
-          <div id="qiblaStatus" class="status-msg hidden" style="margin-top:12px"></div>
-          <p class="qibla-hint">On mobile, if you grant compass access, the needle will rotate with your device automatically.</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== HALAL RESTAURANTS PAGE ===== -->
-    <div id="pageHalal" class="page">
-      <div class="page-header">
-        <button class="back-btn" data-back>‹</button>
-        <div class="page-title">🍽️ Halal Restaurants</div>
-        <div style="width:36px"></div>
-      </div>
-      <div class="page-body">
-        <button class="action-btn" id="btnFindHalal">📍 Find Halal Food Near Me</button>
-        <div id="halalStatus" class="status-msg hidden"></div>
-        <div id="halalList" class="place-list hidden"></div>
-      </div>
-    </div>
-
-  </div><!-- /#app -->
-
-  <!-- ===== SETTINGS PANEL ===== -->
+  <!-- Settings Panel -->
   <div id="settingsOverlay" class="overlay hidden"></div>
   <aside id="settingsPanel" class="settings-panel hidden">
     <div class="settings-header">
@@ -277,7 +43,7 @@
         </select>
       </div>
       <div class="setting-group">
-        <label>Results to Show</label>
+        <label>Mosques to Show</label>
         <select id="settingLimit">
           <option value="3">3 nearest</option>
           <option value="5" selected>5 nearest</option>
@@ -285,22 +51,182 @@
           <option value="10">10 nearest</option>
         </select>
       </div>
-      <div class="setting-group">
-        <label>Quran Translation</label>
-        <select id="settingTranslation">
-          <option value="en.asad">Muhammad Asad (English)</option>
-          <option value="en.sahih" selected>Saheeh International (English)</option>
-          <option value="en.pickthall">Pickthall (English)</option>
-          <option value="en.yusufali">Yusuf Ali (English)</option>
-          <option value="fr.hamidullah">Hamidullah (French)</option>
-          <option value="de.bubenheim">Bubenheim (German)</option>
-          <option value="tr.diyanet">Diyanet (Turkish)</option>
-          <option value="ur.jalandhry">Jalandhry (Urdu)</option>
-        </select>
-      </div>
-      <button class="btn-gold full-width" id="applySettings">Apply & Save</button>
+      <button class="btn-primary full-width" id="applySettings">Apply & Refresh</button>
     </div>
   </aside>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="brand-mark">🕌</div>
+      <div>
+        <div class="brand-name">UmmahMap</div>
+        <div class="hijri-date" id="hijriDate">Loading date…</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="quote-wrap" id="quoteWrap">
+        <div class="quote-text" id="quote"></div>
+      </div>
+      <button class="icon-btn settings-btn" id="openSettings" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Prayer Times -->
+    <section class="card" id="sectionPrayer">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🌙</span>
+          Prayer Times
+        </div>
+        <button class="btn-ghost" id="btnPrayerGps">
+          <span class="btn-icon">📍</span> Get by GPS
+        </button>
+      </div>
+      <div id="prayerGpsStatus" class="status-msg hidden"></div>
+      <div id="prayerCountdown" class="countdown hidden"></div>
+      <div id="prayerGpsCards" class="prayer-grid hidden"></div>
+      <div id="prayerGpsMeta" class="meta-row hidden"></div>
+    </section>
+
+    <!-- Mosques -->
+    <section class="card" id="sectionMosque">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🕌</span>
+          Nearby Mosques
+        </div>
+        <button class="btn-ghost" id="btnFind">
+          <span class="btn-icon">🔍</span> Find Mosques
+        </button>
+      </div>
+      <div id="mosqueStatus" class="status-msg hidden"></div>
+      <div id="mosqueList" class="mosque-list hidden"></div>
+    </section>
+
+    <!-- Qibla -->
+    <section class="card" id="sectionQibla">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🧭</span>
+          Qibla Direction
+        </div>
+        <button class="btn-ghost" id="btnQibla">
+          <span class="btn-icon">🔄</span> Update
+        </button>
+      </div>
+      <div class="qibla-body">
+        <div class="compass-wrap">
+          <div class="compass-ring">
+            <div class="compass-labels">
+              <span class="cn">N</span>
+              <span class="ce">E</span>
+              <span class="cs">S</span>
+              <span class="cw">W</span>
+            </div>
+            <div class="compass-needle" id="qiblaArrow">
+              <div class="needle-tip"></div>
+              <div class="needle-base"></div>
+            </div>
+            <div class="compass-kaaba">🕋</div>
+          </div>
+        </div>
+        <div class="qibla-info">
+          <div class="bearing-display">
+            <span id="qiblaBearing">—</span>°
+            <span class="bearing-label">from North</span>
+          </div>
+          <p class="qibla-hint">Allow location access. On mobile with a compass, the arrow tracks your heading live.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quran -->
+    <section class="card" id="sectionQuran">
+      <div class="card-header">
+        <div class="card-title"><span class="card-icon">📖</span> Quran</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-ghost" id="btnQuranRandom"><span class="btn-icon">✨</span> Random Verse</button>
+          <button class="btn-ghost" id="btnQuranToggleSearch"><span class="btn-icon">🔍</span> Search / Go to</button>
+        </div>
+      </div>
+      <div id="quranSearchRow" class="search-row hidden">
+        <input type="text" id="quranSearchInput" class="search-input" placeholder="Keyword or Surah:Ayah (e.g. 2:255)" />
+        <button class="btn-primary" id="btnQuranGo">Go</button>
+      </div>
+      <!-- Surah browser -->
+      <div id="quranSurahBrowser" class="surah-browser">
+        <div class="surah-browser-header">
+          <span style="font-size:13px;color:var(--text3)">Browse &amp; tap a surah to read</span>
+          <button class="btn-ghost btn-xs" id="btnToggleSurahList">Show all surahs ▾</button>
+        </div>
+        <div id="surahListWrap" class="surah-list-wrap hidden"></div>
+      </div>
+      <div id="quranStatus" class="status-msg hidden"></div>
+      <div id="quranResult" class="quran-result hidden">
+        <div class="quran-arabic" id="quranArabic"></div>
+        <div class="quran-divider"></div>
+        <div class="quran-translation" id="quranTranslation"></div>
+        <div class="quran-meta" id="quranMeta"></div>
+      </div>
+      <!-- Full surah reader -->
+      <div id="quranReader" class="quran-reader-wrap hidden">
+        <div class="quran-reader-header" id="quranReaderHeader"></div>
+        <div id="quranReaderAyahs"></div>
+        <button class="btn-ghost full-width" id="btnLoadMoreAyahs" style="margin-top:10px">Load more verses ▾</button>
+      </div>
+    </section>
+
+    <!-- Hadith -->
+    <section class="card" id="sectionHadith">
+      <div class="card-header">
+        <div class="card-title"><span class="card-icon">📜</span> Hadith</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="hadithCollection" class="setting-select-inline">
+            <option value="bukhari">Bukhari</option>
+            <option value="muslim">Muslim</option>
+            <option value="abudawud">Abu Dawud</option>
+            <option value="tirmidhi">Tirmidhi</option>
+            <option value="ibnmajah">Ibn Majah</option>
+            <option value="nasai">Nasa'i</option>
+          </select>
+          <button class="btn-ghost" id="btnHadithRandom"><span class="btn-icon">🔄</span> Random</button>
+        </div>
+      </div>
+      <div class="hadith-num-row">
+        <input type="number" id="hadithNumber" class="search-input hadith-num-input" placeholder="Hadith # (e.g. 1)" min="1" />
+        <button class="btn-primary" id="btnHadithGo">Go</button>
+      </div>
+      <div id="hadithStatus" class="status-msg hidden"></div>
+      <div id="hadithResult" class="hadith-card hidden">
+        <div class="hadith-collection-label" id="hadithLabel"></div>
+        <div class="hadith-body" id="hadithBody"></div>
+        <div class="hadith-footer">
+          <span class="hadith-ref" id="hadithRef"></span>
+          <span class="hadith-grade" id="hadithGrade"></span>
+        </div>
+        <div class="hadith-chapter" id="hadithChapter"></div>
+      </div>
+    </section>
+
+    <!-- Halal Restaurants -->
+    <section class="card" id="sectionHalal">
+      <div class="card-header">
+        <div class="card-title"><span class="card-icon">🍽️</span> Halal Restaurants</div>
+        <button class="btn-ghost" id="btnFindHalal"><span class="btn-icon">📍</span> Find Nearby</button>
+      </div>
+      <div id="halalStatus" class="status-msg hidden"></div>
+      <div id="halalList" class="mosque-list hidden"></div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>Prayer times via AlAdhan · Mosques &amp; Restaurants via Google Places · Quran via Al-Quran Cloud · Hadith via HadithAPI</span>
+  </footer>
 
   <script src="/static/app.js" defer></script>
 </body>
