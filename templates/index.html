@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UmmahMap</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- Settings Panel -->
+  <div id="settingsOverlay" class="overlay hidden"></div>
+  <aside id="settingsPanel" class="settings-panel hidden">
+    <div class="settings-header">
+      <h3>Settings</h3>
+      <button class="icon-btn" id="closeSettings">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="setting-group">
+        <label>Prayer Calculation Method</label>
+        <select id="settingMethod">
+          <option value="1">University of Islamic Sciences, Karachi</option>
+          <option value="2" selected>ISNA (North America)</option>
+          <option value="3">Muslim World League</option>
+          <option value="4">Umm Al-Qura, Makkah</option>
+          <option value="5">Egyptian General Authority</option>
+          <option value="7">Institute of Geophysics, Tehran</option>
+          <option value="8">Gulf Region</option>
+          <option value="9">Kuwait</option>
+          <option value="10">Qatar</option>
+          <option value="11">Majlis Ugama Islam Singapura</option>
+          <option value="15">Diyanet İşleri Başkanlığı, Turkey</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Asr Juristic School</label>
+        <select id="settingSchool">
+          <option value="0">Shafi'i / Maliki / Hanbali (Standard)</option>
+          <option value="1">Hanafi (Later time)</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Mosques to Show</label>
+        <select id="settingLimit">
+          <option value="3">3 nearest</option>
+          <option value="5" selected>5 nearest</option>
+          <option value="8">8 nearest</option>
+          <option value="10">10 nearest</option>
+        </select>
+      </div>
+      <button class="btn-primary full-width" id="applySettings">Apply & Refresh</button>
+    </div>
+  </aside>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="brand-mark">🕌</div>
+      <div>
+        <div class="brand-name">UmmahMap</div>
+        <div class="hijri-date" id="hijriDate">Loading date…</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="quote-wrap" id="quoteWrap">
+        <div class="quote-text" id="quote"></div>
+      </div>
+      <button class="icon-btn settings-btn" id="openSettings" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Prayer Times -->
+    <section class="card" id="sectionPrayer">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🌙</span>
+          Prayer Times
+        </div>
+        <button class="btn-ghost" id="btnPrayerGps">
+          <span class="btn-icon">📍</span> Get by GPS
+        </button>
+      </div>
+      <div id="prayerGpsStatus" class="status-msg hidden"></div>
+      <div id="prayerCountdown" class="countdown hidden"></div>
+      <div id="prayerGpsCards" class="prayer-grid hidden"></div>
+      <div id="prayerGpsMeta" class="meta-row hidden"></div>
+    </section>
+
+    <!-- Mosques -->
+    <section class="card" id="sectionMosque">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🕌</span>
+          Nearby Mosques
+        </div>
+        <button class="btn-ghost" id="btnFind">
+          <span class="btn-icon">🔍</span> Find Mosques
+        </button>
+      </div>
+      <div id="mosqueStatus" class="status-msg hidden"></div>
+      <div id="mosqueList" class="mosque-list hidden"></div>
+    </section>
+
+    <!-- Qibla -->
+    <section class="card" id="sectionQibla">
+      <div class="card-header">
+        <div class="card-title">
+          <span class="card-icon">🧭</span>
+          Qibla Direction
+        </div>
+        <button class="btn-ghost" id="btnQibla">
+          <span class="btn-icon">🔄</span> Update
+        </button>
+      </div>
+      <div class="qibla-body">
+        <div class="compass-wrap">
+          <div class="compass-ring">
+            <div class="compass-labels">
+              <span class="cn">N</span>
+              <span class="ce">E</span>
+              <span class="cs">S</span>
+              <span class="cw">W</span>
+            </div>
+            <div class="compass-needle" id="qiblaArrow">
+              <div class="needle-tip"></div>
+              <div class="needle-base"></div>
+            </div>
+            <div class="compass-kaaba">🕋</div>
+          </div>
+        </div>
+        <div class="qibla-info">
+          <div class="bearing-display">
+            <span id="qiblaBearing">—</span>°
+            <span class="bearing-label">from North</span>
+          </div>
+          <p class="qibla-hint">Allow location access. On mobile with a compass, the arrow tracks your heading live.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quran -->
+    <section class="card" id="sectionQuran">
+      <div class="card-header">
+        <div class="card-title"><span class="card-icon">📖</span> Quran</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-ghost" id="btnQuranRandom"><span class="btn-icon">✨</span> Random Verse</button>
+          <button class="btn-ghost" id="btnQuranToggleSearch"><span class="btn-icon">🔍</span> Search / Go to</button>
+        </div>
+      </div>
+      <div id="quranSearchRow" class="search-row hidden">
+        <input type="text" id="quranSearchInput" class="search-input" placeholder="Keyword or Surah:Ayah (e.g. 2:255)" />
+        <button class="btn-primary" id="btnQuranGo">Go</button>
+      </div>
+      <!-- Surah browser -->
+      <div id="quranSurahBrowser" class="surah-browser">
+        <div class="surah-browser-header">
+          <span style="font-size:13px;color:var(--text3)">Browse &amp; tap a surah to read</span>
+          <button class="btn-ghost btn-xs" id="btnToggleSurahList">Show all surahs ▾</button>
+        </div>
+        <div id="surahListWrap" class="surah-list-wrap hidden"></div>
+      </div>
+      <div id="quranStatus" class="status-msg hidden"></div>
+      <div id="quranResult" class="quran-result hidden">
+        <div class="quran-arabic" id="quranArabic"></div>
+        <div class="quran-divider"></div>
+        <div class="quran-translation" id="quranTranslation"></div>
+        <div class="quran-meta" id="quranMeta"></div>
+      </div>
+      <!-- Full surah reader -->
+      <div id="quranReader" class="quran-reader-wrap hidden">
+        <div class="quran-reader-header" id="quranReaderHeader"></div>
+        <div id="quranReaderAyahs"></div>
+        <button class="btn-ghost full-width" id="btnLoadMoreAyahs" style="margin-top:10px">Load more verses ▾</button>
+      </div>
+    </section>
+
+    <!-- Hadith -->
+    <section class="card" id="sectionHadith">
+      <div class="card-header">
+        <div class="card-title"><span class="card-icon">📜</span> Hadith</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select id="hadithCollection" class="setting-select-inline">
+            <option value="bukhari">Bukhari</option>
+            <option value="muslim">Muslim</option>
+            <option value="abudawud">Abu Dawud</option>
+            <option value="tirmidhi">Tirmidhi</option>
+            <option value="ibnmajah">Ibn Majah</option>
+            <option value="nasai">Nasa'i</option>
+          </select>
+          <button class="btn-ghost" id="btnHadithRandom"><span class="btn-icon">🔄</span> Random</button>
+        </div>
+      </div>
+      <div class="hadith-num-row">
+        <input type="number" id="hadithNumber" class="search-input hadith-num-input" placeholder="Hadith # (e.g. 1)" min="1" />
+        <button class="btn-primary" id="btnHadithGo">Go</button>
+      </div>
+      <div id="hadithStatus" class="status-msg hidden"></div>
+      <div id="hadithResult" class="hadith-card hidden">
+        <div class="hadith-collection-label" id="hadithLabel"></div>
+        <div class="hadith-body" id="hadithBody"></div>
+        <div class="hadith-footer">
+          <span class="hadith-ref" id="hadithRef"></span>
+          <span class="hadith-grade" id="hadithGrade"></span>
+        </div>
+        <div class="hadith-chapter" id="hadithChapter"></div>
+      </div>
+    </section>
+
+    <!-- Halal Restaurants -->
+    <section class="card" id="sectionHalal">
+      <div class="card-header">
+        <div class="card-title"><span class="card-icon">🍽️</span> Halal Restaurants</div>
+        <button class="btn-ghost" id="btnFindHalal"><span class="btn-icon">📍</span> Find Nearby</button>
+      </div>
+      <div id="halalStatus" class="status-msg hidden"></div>
+      <div id="halalList" class="mosque-list hidden"></div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>Prayer times via AlAdhan · Mosques &amp; Restaurants via Google Places · Quran via Al-Quran Cloud · Hadith via HadithAPI</span>
+  </footer>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
