@@ -87,7 +87,7 @@ function getLocation() {
         resolve(cachedLoc);
       },
       () => reject(new Error("Location permission denied or timed out")),
-      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
     );
   });
 }
@@ -119,6 +119,16 @@ function parseTime(str) {
   if (!match) return null;
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(match[1]), parseInt(match[2]), 0, 0);
+}
+
+function to12h(str) {
+  const match = str.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return str;
+  let h = parseInt(match[1], 10);
+  const m = match[2];
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return `${h}:${m} ${ampm}`;
 }
 
 function findNextPrayer(timings) {
@@ -154,7 +164,7 @@ function updateCountdown() {
   const ms = next.time - new Date();
   if (ms < 0) { cd.classList.add("hidden"); return; }
   cd.classList.remove("hidden");
-  cd.innerHTML = `<span>⏱ Next prayer — <b>${next.name}</b></span><span class="countdown-time">${formatCountdown(ms)}</span>`;
+  cd.innerHTML = `<span>⏱ Next prayer — <b>${next.name}</b> at ${to12h(prayerTimings[next.name])}</span><span class="countdown-time">${formatCountdown(ms)}</span>`;
 }
 
 function renderPrayerCards(timings) {
@@ -174,7 +184,7 @@ function renderPrayerCards(timings) {
 
     const card = document.createElement("div");
     card.className = `pt-card${isNext ? " is-next" : ""}${isCurrent ? " is-current" : ""}`;
-    card.innerHTML = `<div class="pt-name">${name}</div><div class="pt-time">${t}</div>`;
+    card.innerHTML = `<div class="pt-name">${name}</div><div class="pt-time">${to12h(t)}</div>`;
     grid.appendChild(card);
   });
   grid.classList.remove("hidden");
