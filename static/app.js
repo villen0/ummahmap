@@ -638,23 +638,13 @@ async function fetchRandomHadith() {
 async function fetchHadith(collection, num) {
   showHadithStatus("Loading hadith…");
   try {
-    const res = await fetch(`https://hadith-api.vercel.app/api/hadith/${collection}/${num}`);
-    if (!res.ok) throw new Error();
+    const res = await fetch(`/api/hadith/${collection}/${num}`);
+    if (!res.ok) throw new Error((await res.json()).error || "Not found");
     const data = await res.json();
     document.getElementById("hadithStatus").classList.add("hidden");
     renderHadith(data, collection, num);
-  } catch {
-    // fallback random small number
-    try {
-      const n2  = Math.floor(Math.random() * 300) + 1;
-      const r2  = await fetch(`https://hadith-api.vercel.app/api/hadith/${collection}/${n2}`);
-      if (!r2.ok) throw new Error();
-      const d2  = await r2.json();
-      document.getElementById("hadithStatus").classList.add("hidden");
-      renderHadith(d2, collection, n2);
-    } catch {
-      showHadithStatus("Could not load hadith. Try again or pick a different number.", true);
-    }
+  } catch (e) {
+    showHadithStatus(`Could not load hadith. ${e.message || "Try again or pick a different number."}`, true);
   }
 }
 
