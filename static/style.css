@@ -772,6 +772,12 @@ body {
 
 /* Full surah reader */
 .quran-reader-wrap { display: flex; flex-direction: column; gap: 0; }
+.quran-reader-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.quran-reader-nav .btn-ghost:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
 .quran-reader-header {
   background: var(--bg3);
   border: 1px solid var(--border);
