@@ -645,6 +645,7 @@ fetchRandomVerse();
 // ===================== HADITH =====================
 const HADITH_MAX = { bukhari:7563, muslim:3033, abudawud:5274, tirmidhi:3956, ibnmajah:4341, nasai:5761 };
 const COLL_NAMES = { bukhari:"Sahih al-Bukhari", muslim:"Sahih Muslim", abudawud:"Sunan Abu Dawud", tirmidhi:"Jami' at-Tirmidhi", ibnmajah:"Sunan Ibn Majah", nasai:"Sunan an-Nasa'i" };
+let currentHadithNum = null;
 
 document.getElementById("btnHadithRandom").addEventListener("click", fetchRandomHadith);
 document.getElementById("btnHadithGo").addEventListener("click", () => {
@@ -682,6 +683,7 @@ async function fetchHadith(collection, num) {
 }
 
 function renderHadith(data, collection, num) {
+  currentHadithNum = num;
   const text  = data.hadith_english || data.text || data.body || "Text unavailable.";
   const grade = (data.grade || "").trim();
   const chapter = data.chapter_english || data.chapter || "";
@@ -696,7 +698,17 @@ function renderHadith(data, collection, num) {
   else if (grade.toLowerCase().includes("da'if") || grade.toLowerCase().includes("daif")) gEl.classList.add("daif");
   document.getElementById("hadithChapter").textContent = chapter ? `Chapter: ${chapter}` : "";
   document.getElementById("hadithResult").classList.remove("hidden");
+  document.getElementById("btnHadithPrev").disabled = num <= 1;
+  document.getElementById("btnHadithNext").disabled = num >= (HADITH_MAX[collection] || 9999);
 }
+
+document.getElementById("btnHadithPrev").addEventListener("click", () => {
+  if (currentHadithNum > 1) fetchHadith(document.getElementById("hadithCollection").value, currentHadithNum - 1);
+});
+document.getElementById("btnHadithNext").addEventListener("click", () => {
+  const col = document.getElementById("hadithCollection").value;
+  if (currentHadithNum < (HADITH_MAX[col] || 9999)) fetchHadith(col, currentHadithNum + 1);
+});
 
 // Load on boot
 fetchRandomHadith();
