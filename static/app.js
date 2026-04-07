@@ -298,6 +298,7 @@ let qiblaBearing = null;
 let lastHeading   = null;
 let watchId       = null;
 let startedQibla  = false;
+let usingAbsolute = false;  // true once we receive a deviceorientationabsolute event
 
 function normalizeDeg(d) { return ((d % 360) + 360) % 360; }
 
@@ -338,15 +339,27 @@ function startLocationWatch() {
 }
 
 function handleOrientation(e) {
+  // Prefer absolute (north-referenced) events; ignore non-absolute once we have them
+  if (!e.absolute && usingAbsolute) return;
+
   let heading = null;
-  if (typeof e.webkitCompassHeading === "number") heading = e.webkitCompassHeading;
-  else if (typeof e.alpha === "number") heading = e.alpha;
+  if (typeof e.webkitCompassHeading === "number") {
+    // iOS Safari: already clockwise from true north
+    heading = e.webkitCompassHeading;
+  } else if (typeof e.alpha === "number") {
+    // W3C spec: alpha is counter-clockwise from north → convert to CW compass bearing
+    heading = (360 - e.alpha) % 360;
+  }
   if (typeof heading !== "number" || isNaN(heading)) return;
+
+  if (e.absolute) usingAbsolute = true;
+
   lastHeading = normalizeDeg(heading);
   if (typeof qiblaBearing === "number") rotateArrow(normalizeDeg(qiblaBearing - lastHeading));
 }
 
 function startCompass() {
+  // Listen for both; handleOrientation will prefer absolute events
   window.addEventListener("deviceorientationabsolute", handleOrientation, true);
   window.addEventListener("deviceorientation", handleOrientation, true);
 }
@@ -361,6 +374,7 @@ async function ensureMotionPermissioniOS() {
 async function startQiblaLive({ fromButton = false } = {}) {
   if (startedQibla) return;
   startedQibla = true;
+  usingAbsolute = false;
   try {
     await ensureMotionPermissioniOS();
   } catch (e) {
