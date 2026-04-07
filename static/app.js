@@ -435,14 +435,19 @@ document.getElementById("btnToggleSurahList").addEventListener("click", async ()
   }
 });
 
+async function ensureSurahData() {
+  if (surahsData.length > 0) return;
+  const res  = await fetch("https://api.alquran.cloud/v1/surah");
+  const data = await res.json();
+  surahsData = data.data;
+}
+
 async function loadSurahList() {
   surahsLoaded = true;
   const wrap = document.getElementById("surahListWrap");
   wrap.innerHTML = '<span style="color:var(--text3);font-size:13px;padding:8px"><span class="spinner"></span>Loading…</span>';
   try {
-    const res  = await fetch("https://api.alquran.cloud/v1/surah");
-    const data = await res.json();
-    surahsData  = data.data;
+    await ensureSurahData();
     wrap.innerHTML = "";
     surahsData.forEach(s => {
       const btn = document.createElement("button");
@@ -462,12 +467,27 @@ async function loadSurahList() {
   }
 }
 
+function updateSurahNavButtons() {
+  const idx = surahsData.findIndex(s => s.number === currentSurah.number);
+  document.getElementById("btnPrevSurah").disabled = idx <= 0;
+  document.getElementById("btnNextSurah").disabled = idx < 0 || idx >= surahsData.length - 1;
+}
+
+async function navigateSurah(delta) {
+  try { await ensureSurahData(); } catch { return; }
+  const idx  = surahsData.findIndex(s => s.number === currentSurah.number);
+  const next = surahsData[idx + delta];
+  if (next) await openSurah(next);
+}
+
 async function openSurah(surah) {
   currentSurah = surah;
   ayahOffset   = 0;
+  try { await ensureSurahData(); } catch {}
   // Hide single-verse result
   document.getElementById("quranResult").classList.add("hidden");
   document.getElementById("quranStatus").classList.add("hidden");
+  document.getElementById("btnNextSurahBottom").style.display = "none";
   // Show reader
   const reader = document.getElementById("quranReader");
   reader.classList.remove("hidden");
@@ -477,6 +497,7 @@ async function openSurah(surah) {
     <div class="qr-meta">${surah.numberOfAyahs} verses · ${surah.revelationType}</div>`;
   document.getElementById("quranReaderAyahs").innerHTML = "";
   document.getElementById("btnLoadMoreAyahs").classList.add("hidden");
+  updateSurahNavButtons();
   // Scroll to reader
   reader.scrollIntoView({ behavior: "smooth", block: "start" });
   await loadMoreAyahs();
@@ -514,8 +535,17 @@ async function loadMoreAyahs() {
       btn.innerHTML = `Load more verses (${ayahOffset}/${surah.numberOfAyahs}) ▾`;
       btn.disabled = false;
       btn.classList.remove("hidden");
+      document.getElementById("btnNextSurahBottom").style.display = "none";
     } else {
       btn.classList.add("hidden");
+      // Show next-surah button if not at the last surah
+      const idx = surahsData.findIndex(s => s.number === surah.number);
+      const nextSurah = surahsData[idx + 1];
+      const nextBtn = document.getElementById("btnNextSurahBottom");
+      if (nextSurah) {
+        nextBtn.textContent = `Continue: ${nextSurah.englishName} \u2192`;
+        nextBtn.style.display = "";
+      }
     }
   } catch {
     btn.innerHTML = "Failed to load. Tap to retry.";
@@ -525,6 +555,9 @@ async function loadMoreAyahs() {
 }
 
 document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAyahs);
+document.getElementById("btnPrevSurah").addEventListener("click", () => navigateSurah(-1));
+document.getElementById("btnNextSurah").addEventListener("click", () => navigateSurah(1));
+document.getElementById("btnNextSurahBottom").addEventListener("click", () => navigateSurah(1));
 
 // Random verse
 document.getElementById("btnQuranRandom").addEventListener("click", fetchRandomVerse);
