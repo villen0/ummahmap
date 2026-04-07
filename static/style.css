@@ -872,3 +872,10 @@ body {
   font-size: 12px; color: var(--text3); font-style: italic;
 }
 .hadith-chapter:empty { display: none; }
+.hadith-nav {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 15px;
+  border-top: 1px solid var(--border);
+}
+.hadith-nav .btn-ghost:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
