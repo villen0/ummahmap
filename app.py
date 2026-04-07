@@ -191,6 +191,60 @@ def prayer_times():
     cache_set(cache_key, payload)
     return jsonify(payload)
 
+# Permanent in-memory cache for hadith collections (they never change)
+_hadith_collections = {}
+
+HADITH_EDITIONS = {
+    "bukhari":  "eng-bukhari",
+    "muslim":   "eng-muslim",
+    "abudawud": "eng-abudawud",
+    "tirmidhi": "eng-tirmidhi",
+    "ibnmajah": "eng-ibnmajah",
+    "nasai":    "eng-nasai",
+}
+
+def load_hadith_collection(collection):
+    """Fetch full collection from GitHub raw on first use, cache forever."""
+    if collection in _hadith_collections:
+        return _hadith_collections[collection]
+    edition = HADITH_EDITIONS[collection]
+    url = f"https://raw.githubusercontent.com/fawazahmed0/hadith-api/1/editions/{edition}.min.json"
+    r = requests.get(url, timeout=30)
+    r.raise_for_status()
+    data = r.json()
+    # Build lookup dict: hadithnumber → hadith object
+    lookup = {h["hadithnumber"]: h for h in data.get("hadiths", [])}
+    # Also store section names for chapter lookup
+    sections = data.get("metadata", {}).get("sections", {})
+    _hadith_collections[collection] = {"hadiths": lookup, "sections": sections}
+    return _hadith_collections[collection]
+
+@app.route("/api/hadith/<collection>/<int:num>")
+def hadith(collection, num):
+    if collection not in HADITH_EDITIONS:
+        return jsonify({"error": "Unknown collection"}), 400
+    try:
+        col = load_hadith_collection(collection)
+    except Exception as e:
+        return jsonify({"error": f"Could not load collection: {e}"}), 503
+    h = col["hadiths"].get(num)
+    if not h:
+        return jsonify({"error": f"Hadith {num} not found in {collection}"}), 404
+    # Resolve chapter name from section metadata
+    ref = h.get("reference", {})
+    book_num = str(ref.get("book", ""))
+    chapter = col["sections"].get(book_num, "")
+    # Flatten grades array to a single string
+    grades = h.get("grades", [])
+    grade_str = grades[0].get("grade", "") if grades else ""
+    return jsonify({
+        "number":  num,
+        "text":    h.get("text", ""),
+        "grade":   grade_str,
+        "chapter": chapter,
+        "reference": ref,
+    })
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
