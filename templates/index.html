@@ -158,6 +158,7 @@
         <input type="text" id="quranSearchInput" class="search-input" placeholder="Keyword or Surah:Ayah (e.g. 2:255)" />
         <button class="btn-primary" id="btnQuranGo">Go</button>
       </div>
+      <div id="quranSearchResults" class="quran-search-results hidden"></div>
       <!-- Surah browser -->
       <div id="quranSurahBrowser" class="surah-browser">
         <div class="surah-browser-header">
@@ -208,10 +209,15 @@
         <div id="hadithBrowserList" class="hadith-browser-list"></div>
         <button class="btn-ghost full-width" id="btnHadithBrowserMore" style="margin-top:8px">Load more ▾</button>
       </div>
+      <div class="hadith-search-row">
+        <input type="text" id="hadithSearchInput" class="search-input hadith-search-input" placeholder="Search by keyword (e.g. patience, prayer)" />
+        <button class="btn-primary" id="btnHadithSearch">Search</button>
+      </div>
       <div class="hadith-num-row">
         <input type="number" id="hadithNumber" class="search-input hadith-num-input" placeholder="Hadith # (e.g. 1)" min="1" />
         <button class="btn-primary" id="btnHadithGo">Go</button>
       </div>
+      <div id="hadithSearchResults" class="hadith-search-results hidden"></div>
       <div id="hadithStatus" class="status-msg hidden"></div>
       <div id="hadithResult" class="hadith-card hidden">
         <div class="hadith-collection-label">
