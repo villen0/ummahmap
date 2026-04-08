@@ -809,6 +809,17 @@ body {
 }
 .btn-ghost.full-width { width: 100%; justify-content: center; }
 
+/* Transliteration */
+.ayah-translit {
+  display: none;
+  font-size: 12.5px;
+  color: var(--text3);
+  line-height: 1.65;
+  font-style: italic;
+  margin-bottom: 4px;
+}
+.quran-reader-wrap.show-translit .ayah-translit { display: block; }
+
 /* ===== HADITH ===== */
 .setting-select-inline {
   background: var(--bg3);
@@ -843,11 +854,25 @@ body {
   animation: fadeUp 0.35s ease both;
 }
 .hadith-collection-label {
-  padding: 9px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 9px 9px 15px;
   background: var(--gold-dim);
   border-bottom: 1px solid rgba(201,168,76,0.15);
   font-size: 11.5px; font-weight: 700; color: var(--gold);
   letter-spacing: 0.4px; text-transform: uppercase;
+}
+.hadith-close-btn {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold);
+  padding: 2px 7px;
+  font-size: 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 .hadith-body {
   padding: 16px 15px;
@@ -872,3 +897,102 @@ body {
   font-size: 12px; color: var(--text3); font-style: italic;
 }
 .hadith-chapter:empty { display: none; }
+
+/* ===== TASBIH ===== */
+.tasbih-select {
+  width: 100%;
+  margin-bottom: 14px;
+  font-size: 13px;
+  padding: 9px 32px 9px 12px;
+}
+.tasbih-goals {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.tasbih-goal-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: rgba(255,255,255,0.04);
+  color: var(--text2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tasbih-goal-btn.active {
+  border-color: var(--gold);
+  background: var(--gold-dim);
+  color: var(--gold2);
+}
+.tasbih-goal-btn:hover:not(.active) { background: rgba(255,255,255,0.08); }
+.tasbih-ring-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  width: 180px;
+  height: 180px;
+}
+.tasbih-svg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  transform: rotate(-90deg);
+}
+.tasbih-ring-bg {
+  fill: none;
+  stroke: var(--border2);
+  stroke-width: 8;
+}
+.tasbih-ring-fg {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s ease;
+}
+.tasbih-tap-btn {
+  position: relative;
+  z-index: 1;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  background: var(--bg3);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition: transform 0.1s ease, background 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.tasbih-tap-btn:active { transform: scale(0.93); }
+.tasbih-tap-btn.tasbih-complete {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+}
+.tasbih-count {
+  font-size: 38px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.tasbih-goal-label {
+  font-size: 13px;
+  color: var(--text3);
+  font-weight: 500;
+}
+@media (max-width: 480px) {
+  .tasbih-ring-wrap { width: 160px; height: 160px; }
+  .tasbih-tap-btn { width: 108px; height: 108px; }
+  .tasbih-count { font-size: 32px; }
+}

@@ -2,6 +2,7 @@ import os
 import math
 import time
 import requests
+from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
@@ -34,6 +35,26 @@ def bearing_to_kaaba(lat, lng):
     x = math.cos(phi1) * math.sin(phi2) - math.sin(phi1) * math.cos(phi2) * math.cos(d_lambda)
     brng = (math.degrees(math.atan2(y, x)) + 360) % 360
     return brng
+
+def get_place_website(place_id):
+    """Fetch the official website for a place via Places Details API. Returns "" if none."""
+    if not (place_id and GOOGLE_KEY):
+        return ""
+    cache_key = f"website_{place_id}"
+    cached = cache_get(cache_key)
+    if cached is not None:          # "" is a valid cached value meaning "no website"
+        return cached
+    try:
+        r = requests.get(
+            "https://maps.googleapis.com/maps/api/place/details/json",
+            params={"key": GOOGLE_KEY, "place_id": place_id, "fields": "website"},
+            timeout=6
+        )
+        website = r.json().get("result", {}).get("website", "")
+    except Exception:
+        website = ""
+    cache_set(cache_key, website)
+    return website
 
 def haversine_km(lat1, lng1, lat2, lng2):
     R = 6371
@@ -75,8 +96,13 @@ def nearby_mosques():
     if not results:
         return jsonify({"error": "No mosques found nearby"}), 404
 
+    top = results[:limit]
+    # Fetch websites in parallel (cached per place_id)
+    with ThreadPoolExecutor(max_workers=len(top) or 1) as ex:
+        websites = list(ex.map(lambda m: get_place_website(m.get("place_id", "")), top))
+
     mosques = []
-    for m in results[:limit]:
+    for m, website in zip(top, websites):
         mlat = m["geometry"]["location"]["lat"]
         mlng = m["geometry"]["location"]["lng"]
         dist_km = haversine_km(lat, lng, mlat, mlng)
@@ -90,6 +116,7 @@ def nearby_mosques():
             "distance_m": round(dist_km * 1000),
             "rating": m.get("rating"),
             "open_now": m.get("opening_hours", {}).get("open_now"),
+            "website": website or None,
             "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={m.get('place_id','')}",
             "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{m.get('place_id','')}"
         })
@@ -116,8 +143,12 @@ def halal_restaurants():
     results = data.get("results", [])
     if not results:
         return jsonify({"error": "No halal restaurants found nearby"}), 404
+    top = results[:limit]
+    with ThreadPoolExecutor(max_workers=len(top) or 1) as ex:
+        websites = list(ex.map(lambda m: get_place_website(m.get("place_id", "")), top))
+
     restaurants = []
-    for m in results[:limit]:
+    for m, website in zip(top, websites):
         mlat = m["geometry"]["location"]["lat"]
         mlng = m["geometry"]["location"]["lng"]
         dist_km = haversine_km(lat, lng, mlat, mlng)
@@ -132,6 +163,7 @@ def halal_restaurants():
             "user_ratings_total": m.get("user_ratings_total"),
             "price_level": m.get("price_level"),
             "open_now": m.get("opening_hours", {}).get("open_now"),
+            "website": website or None,
             "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={m.get('place_id','')}",
             "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{m.get('place_id','')}"
         })

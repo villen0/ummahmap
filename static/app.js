@@ -259,7 +259,9 @@ function renderMosques(mosques) {
       </div>
       <div class="mosque-actions">
         <a href="${m.maps_directions_url}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
-        <a href="${m.maps_place_url}" target="_blank" rel="noopener" class="link-btn">Details</a>
+        ${m.website
+          ? `<a href="${m.website}" target="_blank" rel="noopener" class="link-btn">🌐 Website</a>`
+          : `<a href="${m.maps_place_url}" target="_blank" rel="noopener" class="link-btn">Details</a>`}
       </div>
     `;
     list.appendChild(card);
@@ -413,6 +415,7 @@ let surahsLoaded = false;
 let currentSurah = null;
 let ayahOffset = 0;
 const AYAHS_PER_LOAD = 20;
+const translitCache = {}; // keyed by surah number
 
 // Toggle search bar
 document.getElementById("btnQuranToggleSearch").addEventListener("click", () => {
@@ -490,12 +493,21 @@ async function loadMoreAyahs() {
   btn.disabled = true;
 
   try {
-    const [arRes, enRes] = await Promise.all([
+    // Fetch Arabic, English, and transliteration (translit is cached per surah)
+    let trAyahs = translitCache[surah.number];
+    const [arRes, enRes, trRes] = await Promise.all([
       fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
-      fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`)
+      fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
+      trAyahs ? Promise.resolve(null)
+               : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`)
     ]);
     const arData = await arRes.json();
     const enData = await enRes.json();
+    if (trRes) {
+      const trData = await trRes.json();
+      trAyahs = trData.data?.ayahs || [];
+      translitCache[surah.number] = trAyahs;
+    }
     const arAyahs = arData.data.ayahs;
     const enAyahs = enData.data?.ayahs || [];
     const container = document.getElementById("quranReaderAyahs");
@@ -506,6 +518,7 @@ async function loadMoreAyahs() {
       block.style.animationDelay = `${(i - offset) * 0.03}s`;
       block.innerHTML = `
         <div class="ayah-arabic">${arAyahs[i].text} <span class="ayah-num">${arAyahs[i].numberInSurah}</span></div>
+        <div class="ayah-translit">${trAyahs?.[i]?.text || ""}</div>
         <div class="ayah-translation">${enAyahs[i]?.text || ""}</div>`;
       container.appendChild(block);
     }
@@ -525,6 +538,15 @@ async function loadMoreAyahs() {
 }
 
 document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAyahs);
+
+// Transliteration toggle
+document.getElementById("btnTranslitToggle").addEventListener("click", () => {
+  const reader = document.getElementById("quranReader");
+  const btn    = document.getElementById("btnTranslitToggle");
+  const on     = reader.classList.toggle("show-translit");
+  btn.style.color       = on ? "var(--gold2)" : "";
+  btn.style.borderColor = on ? "var(--gold)"  : "";
+});
 
 // Random verse
 document.getElementById("btnQuranRandom").addEventListener("click", fetchRandomVerse);
@@ -675,6 +697,10 @@ function renderHadith(data, collection, num) {
   document.getElementById("hadithResult").classList.remove("hidden");
 }
 
+document.getElementById("btnHadithClose").addEventListener("click", () => {
+  document.getElementById("hadithResult").classList.add("hidden");
+});
+
 // Load on boot
 fetchRandomHadith();
 
@@ -707,7 +733,9 @@ function renderHalal(restaurants) {
       </div>
       <div class="mosque-actions">
         <a href="${r.maps_directions_url}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
-        <a href="${r.maps_place_url}" target="_blank" rel="noopener" class="link-btn">Details</a>
+        ${r.website
+          ? `<a href="${r.website}" target="_blank" rel="noopener" class="link-btn">🌐 Website</a>`
+          : `<a href="${r.maps_place_url}" target="_blank" rel="noopener" class="link-btn">Details</a>`}
       </div>`;
     list.appendChild(card);
   });
@@ -733,3 +761,46 @@ async function loadHalalRestaurants() {
     status.classList.add("error");
   }
 }
+
+
+// ===================== TASBIH =====================
+let tasbihCount = 0;
+let tasbihGoal  = 33;
+
+function tasbihUpdateRing() {
+  const circ   = 314.16;
+  const pct    = tasbihGoal > 0 ? Math.min(tasbihCount / tasbihGoal, 1) : 0;
+  const offset = circ - circ * pct;
+  document.getElementById("tasbihRingFg").style.strokeDashoffset = offset;
+  document.getElementById("tasbihCount").textContent    = tasbihCount;
+  document.getElementById("tasbihGoalLabel").textContent = `/ ${tasbihGoal}`;
+}
+
+document.getElementById("btnTasbihTap").addEventListener("click", () => {
+  tasbihCount++;
+  tasbihUpdateRing();
+  if (navigator.vibrate) navigator.vibrate(30);
+  if (tasbihCount === tasbihGoal) {
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    document.getElementById("btnTasbihTap").classList.add("tasbih-complete");
+  }
+});
+
+document.getElementById("btnTasbihReset").addEventListener("click", () => {
+  tasbihCount = 0;
+  document.getElementById("btnTasbihTap").classList.remove("tasbih-complete");
+  tasbihUpdateRing();
+});
+
+document.querySelectorAll(".tasbih-goal-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    tasbihGoal = parseInt(btn.dataset.goal);
+    document.querySelectorAll(".tasbih-goal-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    tasbihCount = 0;
+    document.getElementById("btnTasbihTap").classList.remove("tasbih-complete");
+    tasbihUpdateRing();
+  });
+});
+
+tasbihUpdateRing(); // initialise ring on load
