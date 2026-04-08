@@ -427,12 +427,6 @@ let ayahOffset = 0;
 const AYAHS_PER_LOAD = 20;
 const translitCache = {}; // keyed by surah number
 
-// Toggle search bar
-document.getElementById("btnQuranToggleSearch").addEventListener("click", () => {
-  const row = document.getElementById("quranSearchRow");
-  row.classList.toggle("hidden");
-  if (!row.classList.contains("hidden")) document.getElementById("quranSearchInput").focus();
-});
 
 // Toggle surah list
 document.getElementById("btnToggleSurahList").addEventListener("click", async () => {
@@ -497,10 +491,6 @@ async function openSurah(surah) {
   currentSurah = surah;
   ayahOffset   = 0;
   try { await ensureSurahData(); } catch {}
-  // Hide single-verse result and search results
-  clearQuranSearchResults();
-  document.getElementById("quranResult").classList.add("hidden");
-  document.getElementById("quranStatus").classList.add("hidden");
   document.getElementById("btnNextSurahBottom").style.display = "none";
   // Show reader
   const reader = document.getElementById("quranReader");
@@ -592,117 +582,6 @@ document.getElementById("btnTranslitToggle").addEventListener("click", () => {
   btn.style.borderColor = on ? "var(--gold)"  : "";
 });
 
-// Random verse
-document.getElementById("btnQuranRandom").addEventListener("click", fetchRandomVerse);
-document.getElementById("btnQuranGo").addEventListener("click", handleQuranSearch);
-document.getElementById("quranSearchInput").addEventListener("keydown", e => {
-  if (e.key === "Enter") handleQuranSearch();
-});
-
-async function handleQuranSearch() {
-  const input = document.getElementById("quranSearchInput").value.trim();
-  if (!input) return;
-  const colonMatch = input.match(/^(\d+):(\d+)$/);
-  if (colonMatch) {
-    await fetchSingleVerse(parseInt(colonMatch[1]), parseInt(colonMatch[2]));
-  } else {
-    await fetchVerseByKeyword(input);
-  }
-}
-
-function showQuranStatus(msg, isErr = false) {
-  const el = document.getElementById("quranStatus");
-  el.textContent = msg;
-  el.className = "status-msg" + (isErr ? " error" : "");
-  el.classList.remove("hidden");
-  document.getElementById("quranResult").classList.add("hidden");
-  document.getElementById("quranReader").classList.add("hidden");
-}
-
-async function fetchSingleVerse(surah, ayah) {
-  showQuranStatus("Loading verse…");
-  try {
-    const [arRes, enRes] = await Promise.all([
-      fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/ar.alafasy`),
-      fetch(`https://api.alquran.cloud/v1/ayah/${surah}:${ayah}/en.sahih`)
-    ]);
-    const arData = await arRes.json();
-    const enData = await enRes.json();
-    if (arData.code !== 200) throw new Error();
-    document.getElementById("quranStatus").classList.add("hidden");
-    renderSingleVerse(arData.data, enData.data);
-  } catch {
-    showQuranStatus("Verse not found. Try e.g. 2:255", true);
-  }
-}
-
-async function fetchVerseByKeyword(query) {
-  showQuranStatus(`Searching for "${query}"…`);
-  clearQuranSearchResults();
-  try {
-    const res  = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(query)}/all/en.sahih`);
-    const data = await res.json();
-    if (data.code !== 200 || !data.data?.matches?.length) {
-      showQuranStatus(`No verses found for "${query}". Try a different keyword or use Surah:Ayah (e.g. 2:255).`, true);
-      return;
-    }
-    document.getElementById("quranStatus").classList.add("hidden");
-    renderQuranSearchResults(data.data.matches, query);
-  } catch {
-    showQuranStatus("Search failed. Check your connection and try again.", true);
-  }
-}
-
-function renderQuranSearchResults(matches, query) {
-  const container = document.getElementById("quranSearchResults");
-  document.getElementById("quranResult").classList.add("hidden");
-  document.getElementById("quranReader").classList.add("hidden");
-  container.innerHTML = `<div class="search-results-header">Found <b>${matches.length}</b> verse${matches.length !== 1 ? "s" : ""} for "<b>${query}</b>"</div>`;
-  matches.forEach(m => {
-    const item = document.createElement("button");
-    item.className = "quran-search-item";
-    item.innerHTML = `
-      <div class="qsi-ref">📖 ${m.surah.englishName} · ${m.surah.number}:${m.numberInSurah}</div>
-      <div class="qsi-text">${m.text}</div>`;
-    item.addEventListener("click", () => {
-      clearQuranSearchResults();
-      fetchSingleVerse(m.surah.number, m.numberInSurah);
-    });
-    container.appendChild(item);
-  });
-  container.classList.remove("hidden");
-}
-
-function clearQuranSearchResults() {
-  const el = document.getElementById("quranSearchResults");
-  if (el) { el.innerHTML = ""; el.classList.add("hidden"); }
-}
-
-async function fetchRandomVerse() {
-  document.getElementById("quranReader").classList.add("hidden");
-  clearQuranSearchResults();
-  showQuranStatus("Loading random verse…");
-  try {
-    const sRes  = await fetch(`https://api.alquran.cloud/v1/surah/${Math.floor(Math.random()*114)+1}`);
-    const sData = await sRes.json();
-    const total = sData.data.numberOfAyahs;
-    await fetchSingleVerse(sData.data.number, Math.floor(Math.random()*total)+1);
-  } catch {
-    showQuranStatus("Could not load verse. Try again.", true);
-  }
-}
-
-function renderSingleVerse(ar, en) {
-  document.getElementById("quranArabic").textContent = ar.text;
-  document.getElementById("quranTranslation").textContent = `"${en?.text || ""}"`;
-  document.getElementById("quranMeta").innerHTML = `
-    <span>📖 ${ar.surah.englishName} (${ar.surah.number}:${ar.numberInSurah})</span>
-    <span>${ar.surah.revelationType}</span>`;
-  document.getElementById("quranResult").classList.remove("hidden");
-}
-
-// Load a random verse on boot
-fetchRandomVerse();
 
 
 // ===================== HADITH =====================
@@ -784,82 +663,12 @@ document.getElementById("btnHadithClose").addEventListener("click", () => {
 });
 // ---- end browser ----
 
-document.getElementById("btnHadithRandom").addEventListener("click", fetchRandomHadith);
-document.getElementById("btnHadithGo").addEventListener("click", () => {
-  const num = parseInt(document.getElementById("hadithNumber").value);
-  if (num > 0) fetchHadith(document.getElementById("hadithCollection").value, num);
-});
-document.getElementById("hadithNumber").addEventListener("keydown", e => {
-  if (e.key === "Enter") document.getElementById("btnHadithGo").click();
-});
-
-// ---- Hadith keyword search ----
-function clearHadithSearchResults() {
-  const el = document.getElementById("hadithSearchResults");
-  if (el) { el.innerHTML = ""; el.classList.add("hidden"); }
-}
-
-async function searchHadith() {
-  const query = document.getElementById("hadithSearchInput").value.trim();
-  if (!query) return;
-  const col = document.getElementById("hadithCollection").value;
-  showHadithStatus(`Searching for "${query}"…`);
-  clearHadithSearchResults();
-  try {
-    const res  = await fetch(`/api/hadith/${col}/search?q=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Failed");
-    document.getElementById("hadithStatus").classList.add("hidden");
-    if (!data.results.length) {
-      showHadithStatus(`No hadith found matching "${query}". Try a different keyword or browse the collection.`, true);
-      return;
-    }
-    renderHadithSearchResults(data.results, query, col);
-  } catch (e) {
-    showHadithStatus(`Search failed. ${e.message || "Check your connection."}`, true);
-  }
-}
-
-function renderHadithSearchResults(results, query, col) {
-  const el = document.getElementById("hadithSearchResults");
-  el.innerHTML = `<div class="search-results-header">Found <b>${results.length}</b> hadith${results.length !== 1 ? "s" : ""} matching "<b>${query}</b>"${results.length === 20 ? " (showing top 20)" : ""}</div>`;
-  results.forEach(h => {
-    const btn = document.createElement("button");
-    btn.className = "hadith-search-result-item";
-    btn.innerHTML = `
-      <div class="hsr-num">#${h.number}</div>
-      <div class="hsr-info">
-        <div class="hsr-snippet">${h.snippet}</div>
-        ${h.chapter ? `<div class="hsr-chapter">${h.chapter}</div>` : ""}
-      </div>`;
-    btn.addEventListener("click", () => {
-      clearHadithSearchResults();
-      fetchHadith(col, h.number);
-    });
-    el.appendChild(btn);
-  });
-  el.classList.remove("hidden");
-}
-
-document.getElementById("btnHadithSearch").addEventListener("click", searchHadith);
-document.getElementById("hadithSearchInput").addEventListener("keydown", e => {
-  if (e.key === "Enter") searchHadith();
-});
-document.getElementById("hadithCollection").addEventListener("change", clearHadithSearchResults);
-// ---- end keyword search ----
-
 function showHadithStatus(msg, isErr = false) {
   const el = document.getElementById("hadithStatus");
   el.textContent = msg;
   el.className = "status-msg" + (isErr ? " error" : "");
   el.classList.remove("hidden");
   document.getElementById("hadithResult").classList.add("hidden");
-}
-
-async function fetchRandomHadith() {
-  clearHadithSearchResults();
-  const col = document.getElementById("hadithCollection").value;
-  await fetchHadith(col, Math.floor(Math.random() * (HADITH_MAX[col] || 3000)) + 1);
 }
 
 async function fetchHadith(collection, num) {
@@ -906,8 +715,6 @@ document.getElementById("btnHadithClose").addEventListener("click", () => {
   document.getElementById("hadithResult").classList.add("hidden");
 });
 
-// Load on boot
-fetchRandomHadith();
 
 
 // ===================== HALAL RESTAURANTS =====================
