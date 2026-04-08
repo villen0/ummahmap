@@ -613,6 +613,80 @@ fetchRandomVerse();
 const HADITH_MAX = { bukhari:7563, muslim:3033, abudawud:5274, tirmidhi:3956, ibnmajah:4341, nasai:5761 };
 const COLL_NAMES = { bukhari:"Sahih al-Bukhari", muslim:"Sahih Muslim", abudawud:"Sunan Abu Dawud", tirmidhi:"Jami' at-Tirmidhi", ibnmajah:"Sunan Ibn Majah", nasai:"Sunan an-Nasa'i" };
 
+// ---- Hadith browser ----
+let hadithBrowserPage       = 0;
+let hadithBrowserCollection = null;
+let hadithBrowserOpen       = false;
+
+function toggleHadithBrowser(forceOpen) {
+  const panel = document.getElementById("hadithBrowser");
+  const btn   = document.getElementById("btnHadithBrowse");
+  hadithBrowserOpen = forceOpen !== undefined ? forceOpen : !hadithBrowserOpen;
+  panel.classList.toggle("hidden", !hadithBrowserOpen);
+  btn.style.color       = hadithBrowserOpen ? "var(--gold2)" : "";
+  btn.style.borderColor = hadithBrowserOpen ? "var(--gold)"  : "";
+}
+
+async function loadHadithBrowser(reset = false) {
+  const col = document.getElementById("hadithCollection").value;
+  if (reset || col !== hadithBrowserCollection) {
+    hadithBrowserPage = 0;
+    hadithBrowserCollection = col;
+    document.getElementById("hadithBrowserList").innerHTML = "";
+  }
+  hadithBrowserPage++;
+  const moreBtn = document.getElementById("btnHadithBrowserMore");
+  moreBtn.innerHTML = '<span class="spinner"></span> Loading…';
+  moreBtn.disabled  = true;
+  try {
+    const res  = await fetch(`/api/hadith/${col}/list?page=${hadithBrowserPage}&per_page=30`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+    const list = document.getElementById("hadithBrowserList");
+    data.hadiths.forEach(h => {
+      const btn = document.createElement("button");
+      btn.className = "hadith-browse-item";
+      btn.innerHTML = `
+        <div class="hadith-browse-num">${h.number}</div>
+        <div class="hadith-browse-info">
+          <div class="hadith-browse-snippet">${h.snippet}</div>
+          ${h.chapter ? `<div class="hadith-browse-chapter">${h.chapter}</div>` : ""}
+        </div>`;
+      btn.addEventListener("click", () => {
+        fetchHadith(col, h.number);
+        toggleHadithBrowser(false);
+      });
+      list.appendChild(btn);
+    });
+    if (data.has_more) {
+      moreBtn.innerHTML = `Load more (${data.loaded} / ${data.total}) ▾`;
+      moreBtn.disabled  = false;
+      moreBtn.classList.remove("hidden");
+    } else {
+      moreBtn.classList.add("hidden");
+    }
+  } catch (e) {
+    moreBtn.innerHTML = "Failed to load. Tap to retry.";
+    moreBtn.disabled  = false;
+    moreBtn.classList.remove("hidden");
+  }
+}
+
+document.getElementById("btnHadithBrowse").addEventListener("click", () => {
+  toggleHadithBrowser();
+  if (hadithBrowserOpen) loadHadithBrowser(true);
+});
+document.getElementById("btnHadithBrowserMore").addEventListener("click", () => loadHadithBrowser());
+// Reset browser when collection changes
+document.getElementById("hadithCollection").addEventListener("change", () => {
+  if (hadithBrowserOpen) loadHadithBrowser(true);
+});
+
+document.getElementById("btnHadithClose").addEventListener("click", () => {
+  document.getElementById("hadithResult").classList.add("hidden");
+});
+// ---- end browser ----
+
 document.getElementById("btnHadithRandom").addEventListener("click", fetchRandomHadith);
 document.getElementById("btnHadithGo").addEventListener("click", () => {
   const num = parseInt(document.getElementById("hadithNumber").value);
