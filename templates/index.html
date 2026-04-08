@@ -151,6 +151,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn-ghost" id="btnQuranRandom"><span class="btn-icon">✨</span> Random Verse</button>
           <button class="btn-ghost" id="btnQuranToggleSearch"><span class="btn-icon">🔍</span> Search / Go to</button>
+          <button class="btn-ghost" id="btnTranslitToggle"><span class="btn-icon">Aā</span> Phonetic</button>
         </div>
       </div>
       <div id="quranSearchRow" class="search-row hidden">
@@ -207,7 +208,10 @@
       </div>
       <div id="hadithStatus" class="status-msg hidden"></div>
       <div id="hadithResult" class="hadith-card hidden">
-        <div class="hadith-collection-label" id="hadithLabel"></div>
+        <div class="hadith-collection-label">
+          <span id="hadithLabel"></span>
+          <button class="icon-btn hadith-close-btn" id="btnHadithClose" title="Dismiss">✕</button>
+        </div>
         <div class="hadith-body" id="hadithBody"></div>
         <div class="hadith-footer">
           <span class="hadith-ref" id="hadithRef"></span>
@@ -218,6 +222,37 @@
           <button class="btn-ghost btn-xs" id="btnHadithPrev">&#8592; Prev</button>
           <button class="btn-ghost btn-xs" id="btnHadithNext">Next &#8594;</button>
         </div>
+      </div>
+    </section>
+
+    <!-- Tasbih -->
+    <section class="card" id="sectionTasbih">
+      <div class="card-header">
+        <div class="card-title"><span class="card-icon">📿</span> Tasbih</div>
+        <button class="btn-ghost" id="btnTasbihReset"><span class="btn-icon">↺</span> Reset</button>
+      </div>
+      <select id="tasbihDhikr" class="setting-select-inline tasbih-select">
+        <option value="SubhanAllah">سُبْحَانَ ٱللَّٰهِ — SubhanAllah</option>
+        <option value="Alhamdulillah">ٱلْحَمْدُ لِلَّٰهِ — Alhamdulillah</option>
+        <option value="AllahuAkbar">ٱللَّٰهُ أَكْبَرُ — Allahu Akbar</option>
+        <option value="LaIlahaIllallah">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ — La ilaha illallah</option>
+        <option value="Astaghfirullah">أَسْتَغْفِرُ ٱللَّٰهَ — Astaghfirullah</option>
+      </select>
+      <div class="tasbih-goals">
+        <button class="tasbih-goal-btn active" data-goal="33">33</button>
+        <button class="tasbih-goal-btn" data-goal="99">99</button>
+        <button class="tasbih-goal-btn" data-goal="100">100</button>
+      </div>
+      <div class="tasbih-ring-wrap">
+        <svg class="tasbih-svg" viewBox="0 0 120 120">
+          <circle class="tasbih-ring-bg" cx="60" cy="60" r="50"/>
+          <circle class="tasbih-ring-fg" id="tasbihRingFg" cx="60" cy="60" r="50"
+                  stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+        </svg>
+        <button class="tasbih-tap-btn" id="btnTasbihTap">
+          <span class="tasbih-count" id="tasbihCount">0</span>
+          <span class="tasbih-goal-label" id="tasbihGoalLabel">/ 33</span>
+        </button>
       </div>
     </section>
 
