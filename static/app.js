@@ -497,7 +497,8 @@ async function openSurah(surah) {
   currentSurah = surah;
   ayahOffset   = 0;
   try { await ensureSurahData(); } catch {}
-  // Hide single-verse result
+  // Hide single-verse result and search results
+  clearQuranSearchResults();
   document.getElementById("quranResult").classList.add("hidden");
   document.getElementById("quranStatus").classList.add("hidden");
   document.getElementById("btnNextSurahBottom").style.display = "none";
@@ -636,20 +637,52 @@ async function fetchSingleVerse(surah, ayah) {
 }
 
 async function fetchVerseByKeyword(query) {
-  showQuranStatus("Searching…");
+  showQuranStatus(`Searching for "${query}"…`);
+  document.getElementById("quranSearchResults").innerHTML = "";
+  document.getElementById("quranSearchResults").classList.add("hidden");
   try {
     const res  = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(query)}/all/en.sahih`);
     const data = await res.json();
-    if (data.code !== 200 || !data.data?.matches?.length) throw new Error();
-    const m = data.data.matches[0];
-    await fetchSingleVerse(m.surah.number, m.numberInSurah);
+    if (data.code !== 200 || !data.data?.matches?.length) {
+      showQuranStatus(`No verses found for "${query}". Try a different keyword or use Surah:Ayah (e.g. 2:255).`, true);
+      return;
+    }
+    document.getElementById("quranStatus").classList.add("hidden");
+    renderQuranSearchResults(data.data.matches, query);
   } catch {
-    showQuranStatus("No results found. Try a different keyword.", true);
+    showQuranStatus("Search failed. Check your connection and try again.", true);
   }
+}
+
+function renderQuranSearchResults(matches, query) {
+  const container = document.getElementById("quranSearchResults");
+  document.getElementById("quranResult").classList.add("hidden");
+  document.getElementById("quranReader").classList.add("hidden");
+  container.innerHTML = `<div class="search-results-header">Found <b>${matches.length}</b> verse${matches.length !== 1 ? "s" : ""} for "<b>${query}</b>"</div>`;
+  matches.forEach(m => {
+    const item = document.createElement("button");
+    item.className = "quran-search-item";
+    item.innerHTML = `
+      <div class="qsi-ref">📖 ${m.surah.englishName} · ${m.surah.number}:${m.numberInSurah}</div>
+      <div class="qsi-text">${m.text}</div>`;
+    item.addEventListener("click", () => {
+      container.innerHTML = "";
+      container.classList.add("hidden");
+      fetchSingleVerse(m.surah.number, m.numberInSurah);
+    });
+    container.appendChild(item);
+  });
+  container.classList.remove("hidden");
+}
+
+function clearQuranSearchResults() {
+  const el = document.getElementById("quranSearchResults");
+  if (el) { el.innerHTML = ""; el.classList.add("hidden"); }
 }
 
 async function fetchRandomVerse() {
   document.getElementById("quranReader").classList.add("hidden");
+  clearQuranSearchResults();
   showQuranStatus("Loading random verse…");
   try {
     const sRes  = await fetch(`https://api.alquran.cloud/v1/surah/${Math.floor(Math.random()*114)+1}`);
@@ -751,6 +784,62 @@ document.getElementById("hadithCollection").addEventListener("change", () => {
 document.getElementById("btnHadithClose").addEventListener("click", () => {
   document.getElementById("hadithResult").classList.add("hidden");
 });
+
+// ---- Hadith keyword search ----
+function clearHadithSearchResults() {
+  const el = document.getElementById("hadithSearchResults");
+  if (el) { el.innerHTML = ""; el.classList.add("hidden"); }
+}
+
+async function searchHadith() {
+  const query = document.getElementById("hadithSearchInput").value.trim();
+  if (!query) return;
+  const col = document.getElementById("hadithCollection").value;
+  showHadithStatus(`Searching for "${query}"…`);
+  clearHadithSearchResults();
+  try {
+    const res  = await fetch(`/api/hadith/${col}/search?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+    document.getElementById("hadithStatus").classList.add("hidden");
+    if (!data.results.length) {
+      showHadithStatus(`No hadith found matching "${query}". Try a different keyword or browse the collection.`, true);
+      return;
+    }
+    renderHadithSearchResults(data.results, query, col);
+  } catch (e) {
+    showHadithStatus(`Search failed. ${e.message || "Check your connection."}`, true);
+  }
+}
+
+function renderHadithSearchResults(results, query, col) {
+  const el = document.getElementById("hadithSearchResults");
+  el.innerHTML = `<div class="search-results-header">Found <b>${results.length}</b> hadith${results.length !== 1 ? "s" : ""} matching "<b>${query}</b>"${results.length === 20 ? " (showing top 20)" : ""}</div>`;
+  results.forEach(h => {
+    const btn = document.createElement("button");
+    btn.className = "hadith-browse-item";
+    btn.innerHTML = `
+      <div class="hadith-browse-num">${h.number}</div>
+      <div class="hadith-browse-info">
+        <div class="hadith-browse-snippet">${h.snippet}</div>
+        ${h.chapter ? `<div class="hadith-browse-chapter">${h.chapter}</div>` : ""}
+      </div>`;
+    btn.addEventListener("click", () => {
+      clearHadithSearchResults();
+      fetchHadith(col, h.number);
+    });
+    el.appendChild(btn);
+  });
+  el.classList.remove("hidden");
+}
+
+document.getElementById("btnHadithSearch").addEventListener("click", searchHadith);
+document.getElementById("hadithSearchInput").addEventListener("keydown", e => {
+  if (e.key === "Enter") searchHadith();
+});
+// Clear search results when collection changes
+document.getElementById("hadithCollection").addEventListener("change", clearHadithSearchResults);
+// ---- end keyword search ----
 // ---- end browser ----
 
 document.getElementById("btnHadithRandom").addEventListener("click", fetchRandomHadith);
@@ -771,6 +860,7 @@ function showHadithStatus(msg, isErr = false) {
 }
 
 async function fetchRandomHadith() {
+  clearHadithSearchResults();
   const col = document.getElementById("hadithCollection").value;
   await fetchHadith(col, Math.floor(Math.random() * (HADITH_MAX[col] || 3000)) + 1);
 }
