@@ -572,6 +572,9 @@ document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAy
 document.getElementById("btnPrevSurah").addEventListener("click", () => navigateSurah(-1));
 document.getElementById("btnNextSurah").addEventListener("click", () => navigateSurah(1));
 document.getElementById("btnNextSurahBottom").addEventListener("click", () => navigateSurah(1));
+document.getElementById("btnCloseReader").addEventListener("click", () => {
+  document.getElementById("quranReader").classList.add("hidden");
+});
 
 // Transliteration toggle
 document.getElementById("btnTranslitToggle").addEventListener("click", () => {
