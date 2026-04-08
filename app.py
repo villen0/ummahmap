@@ -304,6 +304,36 @@ def hadith(collection, num):
         "reference": ref,
     })
 
+@app.route("/api/hadith/<collection>/search")
+def hadith_search(collection):
+    if collection not in HADITH_EDITIONS:
+        return jsonify({"error": "Unknown collection"}), 400
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify({"error": "Missing search query"}), 400
+    try:
+        col = load_hadith_collection(collection)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 503
+
+    q_lower = q.lower()
+    hadiths = col["hadiths"]
+    sections = col["sections"]
+    results = []
+    for num in sorted(hadiths.keys()):
+        h = hadiths[num]
+        text = h.get("text", "")
+        if q_lower in text.lower():
+            snippet = (text[:150] + "…") if len(text) > 150 else text
+            ref = h.get("reference", {})
+            chapter = sections.get(str(ref.get("book", "")), "")
+            results.append({"number": num, "snippet": snippet, "chapter": chapter})
+            if len(results) >= 20:
+                break
+
+    return jsonify({"results": results, "total": len(results), "query": q})
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
