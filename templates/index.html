@@ -190,7 +190,7 @@
     <section class="card" id="sectionHadith">
       <div class="card-header">
         <div class="card-title"><span class="card-icon">📜</span> Hadith</div>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <select id="hadithCollection" class="setting-select-inline">
             <option value="bukhari">Bukhari</option>
             <option value="muslim">Muslim</option>
@@ -199,8 +199,14 @@
             <option value="ibnmajah">Ibn Majah</option>
             <option value="nasai">Nasa'i</option>
           </select>
+          <button class="btn-ghost" id="btnHadithBrowse"><span class="btn-icon">📋</span> Browse</button>
           <button class="btn-ghost" id="btnHadithRandom"><span class="btn-icon">🔄</span> Random</button>
         </div>
+      </div>
+      <!-- Collection browser -->
+      <div id="hadithBrowser" class="hadith-browser hidden">
+        <div id="hadithBrowserList" class="hadith-browser-list"></div>
+        <button class="btn-ghost full-width" id="btnHadithBrowserMore" style="margin-top:8px">Load more ▾</button>
       </div>
       <div class="hadith-num-row">
         <input type="number" id="hadithNumber" class="search-input hadith-num-input" placeholder="Hadith # (e.g. 1)" min="1" />

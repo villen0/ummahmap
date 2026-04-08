@@ -251,6 +251,33 @@ def load_hadith_collection(collection):
     _hadith_collections[collection] = {"hadiths": lookup, "sections": sections}
     return _hadith_collections[collection]
 
+@app.route("/api/hadith/<collection>/list")
+def hadith_list(collection):
+    if collection not in HADITH_EDITIONS:
+        return jsonify({"error": "Unknown collection"}), 400
+    page     = request.args.get("page", default=1, type=int)
+    per_page = min(request.args.get("per_page", default=30, type=int), 50)
+    try:
+        col = load_hadith_collection(collection)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 503
+    hadiths     = col["hadiths"]
+    sections    = col["sections"]
+    sorted_nums = sorted(hadiths.keys())
+    total = len(sorted_nums)
+    start = (page - 1) * per_page
+    end   = start + per_page
+    result = []
+    for num in sorted_nums[start:end]:
+        h       = hadiths[num]
+        text    = h.get("text", "")
+        snippet = (text[:120] + "…") if len(text) > 120 else text
+        ref     = h.get("reference", {})
+        chapter = sections.get(str(ref.get("book", "")), "")
+        result.append({"number": num, "snippet": snippet, "chapter": chapter})
+    return jsonify({"hadiths": result, "page": page, "total": total,
+                    "loaded": min(end, total), "has_more": end < total})
+
 @app.route("/api/hadith/<collection>/<int:num>")
 def hadith(collection, num):
     if collection not in HADITH_EDITIONS:
