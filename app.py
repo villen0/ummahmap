@@ -2,6 +2,7 @@ import os
 import math
 import time
 import requests
+from urllib.parse import quote_plus
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
@@ -95,9 +96,10 @@ def nearby_mosques():
         mlat = m["location"]["latitude"]
         mlng = m["location"]["longitude"]
         place_id = m.get("id", "")
+        name = m.get("displayName", {}).get("text", "")
         dist_km = haversine_km(lat, lng, mlat, mlng)
         mosques.append({
-            "name": m.get("displayName", {}).get("text", ""),
+            "name": name,
             "place_id": place_id,
             "address": m.get("formattedAddress", ""),
             "lat": mlat,
@@ -108,7 +110,7 @@ def nearby_mosques():
             "open_now": m.get("currentOpeningHours", {}).get("openNow"),
             "website": m.get("websiteUri") or None,
             "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
-            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query_place_id={place_id}"
+            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query={quote_plus(name)}&query_place_id={place_id}"
         })
 
     payload = {"mosques": mosques, "count": len(mosques)}
@@ -169,9 +171,10 @@ def halal_restaurants():
         mlat = m["location"]["latitude"]
         mlng = m["location"]["longitude"]
         place_id = m.get("id", "")
+        name = m.get("displayName", {}).get("text", "")
         dist_km = haversine_km(lat, lng, mlat, mlng)
         restaurants.append({
-            "name": m.get("displayName", {}).get("text", ""),
+            "name": name,
             "place_id": place_id,
             "address": m.get("formattedAddress", ""),
             "lat": mlat, "lng": mlng,
@@ -183,7 +186,7 @@ def halal_restaurants():
             "open_now": m.get("currentOpeningHours", {}).get("openNow"),
             "website": m.get("websiteUri") or None,
             "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
-            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query_place_id={place_id}"
+            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query={quote_plus(name)}&query_place_id={place_id}"
         })
     payload = {"restaurants": restaurants, "count": len(restaurants)}
     cache_set(cache_key, payload)
