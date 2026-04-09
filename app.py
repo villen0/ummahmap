@@ -108,7 +108,7 @@ def nearby_mosques():
             "open_now": m.get("currentOpeningHours", {}).get("openNow"),
             "website": m.get("websiteUri") or None,
             "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
-            "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query_place_id={place_id}"
         })
 
     payload = {"mosques": mosques, "count": len(mosques)}
@@ -183,7 +183,7 @@ def halal_restaurants():
             "open_now": m.get("currentOpeningHours", {}).get("openNow"),
             "website": m.get("websiteUri") or None,
             "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
-            "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query_place_id={place_id}"
         })
     payload = {"restaurants": restaurants, "count": len(restaurants)}
     cache_set(cache_key, payload)
