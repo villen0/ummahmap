@@ -99,6 +99,7 @@
       <div id="prayerCountdown" class="countdown hidden"></div>
       <div id="prayerGpsCards" class="prayer-grid hidden"></div>
       <div id="prayerGpsMeta" class="meta-row hidden"></div>
+      <button class="btn-ghost full-width hidden" id="btnHidePrayer" style="margin-top:10px">✕ Hide results</button>
     </section>
 
     <!-- Mosques -->
@@ -128,7 +129,7 @@
           <span class="btn-icon">🔄</span> Update
         </button>
       </div>
-      <div class="qibla-body">
+      <div id="qiblaBody" class="qibla-body">
         <div class="compass-wrap">
           <div class="compass-ring">
             <div class="compass-labels">
@@ -152,6 +153,7 @@
           <p class="qibla-hint">Allow location access. On mobile with a compass, the arrow tracks your heading live.</p>
         </div>
       </div>
+      <button class="btn-ghost full-width" id="btnHideQibla" style="margin-top:10px">✕ Hide compass</button>
     </section>
 
     <!-- Quran -->
@@ -230,29 +232,32 @@
         <div class="card-title"><span class="card-icon">📿</span> Tasbih</div>
         <button class="btn-ghost" id="btnTasbihReset"><span class="btn-icon">↺</span> Reset</button>
       </div>
-      <select id="tasbihDhikr" class="setting-select-inline tasbih-select">
-        <option value="SubhanAllah">سُبْحَانَ ٱللَّٰهِ — SubhanAllah</option>
-        <option value="Alhamdulillah">ٱلْحَمْدُ لِلَّٰهِ — Alhamdulillah</option>
-        <option value="AllahuAkbar">ٱللَّٰهُ أَكْبَرُ — Allahu Akbar</option>
-        <option value="LaIlahaIllallah">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ — La ilaha illallah</option>
-        <option value="Astaghfirullah">أَسْتَغْفِرُ ٱللَّٰهَ — Astaghfirullah</option>
-      </select>
-      <div class="tasbih-goals">
-        <button class="tasbih-goal-btn active" data-goal="33">33</button>
-        <button class="tasbih-goal-btn" data-goal="99">99</button>
-        <button class="tasbih-goal-btn" data-goal="100">100</button>
+      <div id="tasbihBody">
+        <select id="tasbihDhikr" class="setting-select-inline tasbih-select">
+          <option value="SubhanAllah">سُبْحَانَ ٱللَّٰهِ — SubhanAllah</option>
+          <option value="Alhamdulillah">ٱلْحَمْدُ لِلَّٰهِ — Alhamdulillah</option>
+          <option value="AllahuAkbar">ٱللَّٰهُ أَكْبَرُ — Allahu Akbar</option>
+          <option value="LaIlahaIllallah">لَا إِلَٰهَ إِلَّا ٱللَّٰهُ — La ilaha illallah</option>
+          <option value="Astaghfirullah">أَسْتَغْفِرُ ٱللَّٰهَ — Astaghfirullah</option>
+        </select>
+        <div class="tasbih-goals">
+          <button class="tasbih-goal-btn active" data-goal="33">33</button>
+          <button class="tasbih-goal-btn" data-goal="99">99</button>
+          <button class="tasbih-goal-btn" data-goal="100">100</button>
+        </div>
+        <div class="tasbih-ring-wrap">
+          <svg class="tasbih-svg" viewBox="0 0 120 120">
+            <circle class="tasbih-ring-bg" cx="60" cy="60" r="50"/>
+            <circle class="tasbih-ring-fg" id="tasbihRingFg" cx="60" cy="60" r="50"
+                    stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+          </svg>
+          <button class="tasbih-tap-btn" id="btnTasbihTap">
+            <span class="tasbih-count" id="tasbihCount">0</span>
+            <span class="tasbih-goal-label" id="tasbihGoalLabel">/ 33</span>
+          </button>
+        </div>
       </div>
-      <div class="tasbih-ring-wrap">
-        <svg class="tasbih-svg" viewBox="0 0 120 120">
-          <circle class="tasbih-ring-bg" cx="60" cy="60" r="50"/>
-          <circle class="tasbih-ring-fg" id="tasbihRingFg" cx="60" cy="60" r="50"
-                  stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
-        </svg>
-        <button class="tasbih-tap-btn" id="btnTasbihTap">
-          <span class="tasbih-count" id="tasbihCount">0</span>
-          <span class="tasbih-goal-label" id="tasbihGoalLabel">/ 33</span>
-        </button>
-      </div>
+      <button class="btn-ghost full-width" id="btnHideTasbih" style="margin-top:10px">✕ Hide counter</button>
     </section>
 
     <!-- Halal Restaurants -->
