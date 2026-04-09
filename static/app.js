@@ -232,6 +232,7 @@ async function loadPrayerTimes() {
     `;
     meta.classList.remove("hidden");
     status.classList.add("hidden");
+    document.getElementById("btnHidePrayer").classList.remove("hidden");
 
     // Countdown
     clearInterval(countdownInterval);
@@ -244,6 +245,29 @@ async function loadPrayerTimes() {
 }
 
 document.getElementById("btnPrayerGps").addEventListener("click", loadPrayerTimes);
+
+document.getElementById("btnHidePrayer").addEventListener("click", () => {
+  document.getElementById("prayerCountdown").classList.add("hidden");
+  document.getElementById("prayerGpsCards").classList.add("hidden");
+  document.getElementById("prayerGpsMeta").classList.add("hidden");
+  document.getElementById("btnHidePrayer").classList.add("hidden");
+});
+
+document.getElementById("btnHideQibla").addEventListener("click", () => {
+  const body = document.getElementById("qiblaBody");
+  const btn  = document.getElementById("btnHideQibla");
+  const hiding = !body.classList.contains("hidden");
+  body.classList.toggle("hidden", hiding);
+  btn.textContent = hiding ? "▶ Show compass" : "✕ Hide compass";
+});
+
+document.getElementById("btnHideTasbih").addEventListener("click", () => {
+  const body = document.getElementById("tasbihBody");
+  const btn  = document.getElementById("btnHideTasbih");
+  const hiding = !body.classList.contains("hidden");
+  body.classList.toggle("hidden", hiding);
+  btn.textContent = hiding ? "▶ Show counter" : "✕ Hide counter";
+});
 
 
 // ===================== MOSQUES =====================
