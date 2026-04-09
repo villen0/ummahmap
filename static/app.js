@@ -424,7 +424,7 @@ async function ensureMotionPermissioniOS() {
   }
 }
 
-async function startQiblaLive({ fromButton = false } = {}) {
+async function startQiblaLive() {
   if (startedQibla) return;
   startedQibla = true;
   usingAbsolute = false;
@@ -433,39 +433,14 @@ async function startQiblaLive({ fromButton = false } = {}) {
   } catch (e) {
     console.log("Motion permission:", e.message);
     startedQibla = false;
-    if (!fromButton) return;
+    return;
   }
   startCompass();
   startLocationWatch();
 }
 
-document.getElementById("btnQibla").addEventListener("click", async () => {
-  const btn = document.getElementById("btnQibla");
-  btn.disabled = true;
-  btn.innerHTML = `<span class="btn-icon"><span class="spinner"></span></span> Locating…`;
-  try {
-    // Immediately resolve bearing from cached/fresh location (don't wait for watchPosition)
-    const loc = await getLocation();
-    const bearing = await fetchQibla(loc.lat, loc.lng);
-    qiblaBearing = bearing;
-    setBearingText(bearing);
-    const rel = typeof lastHeading === "number"
-      ? normalizeDeg(qiblaBearing - lastHeading)
-      : qiblaBearing;
-    rotateArrow(rel);
-    // Then start live compass + location watch for real-time heading updates
-    startedQibla = false;
-    await startQiblaLive({ fromButton: true });
-  } catch (e) {
-    console.warn("Qibla error:", e.message);
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<span class="btn-icon">🔄</span> Update`;
-  }
-});
-
-// Auto-start (Android works; iOS needs tap)
-startQiblaLive({ fromButton: false });
+// Auto-start (Android works without a tap; iOS requires a user gesture for motion permission)
+startQiblaLive();
 
 
 // ===================== BOOT =====================
