@@ -416,9 +416,28 @@ async function startQiblaLive({ fromButton = false } = {}) {
 }
 
 document.getElementById("btnQibla").addEventListener("click", async () => {
-  startedQibla = false;
-  try { await startQiblaLive({ fromButton: true }); }
-  catch (e) { console.warn("Qibla error:", e.message); }
+  const btn = document.getElementById("btnQibla");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="btn-icon"><span class="spinner"></span></span> Locating…`;
+  try {
+    // Immediately resolve bearing from cached/fresh location (don't wait for watchPosition)
+    const loc = await getLocation();
+    const bearing = await fetchQibla(loc.lat, loc.lng);
+    qiblaBearing = bearing;
+    setBearingText(bearing);
+    const rel = typeof lastHeading === "number"
+      ? normalizeDeg(qiblaBearing - lastHeading)
+      : qiblaBearing;
+    rotateArrow(rel);
+    // Then start live compass + location watch for real-time heading updates
+    startedQibla = false;
+    await startQiblaLive({ fromButton: true });
+  } catch (e) {
+    console.warn("Qibla error:", e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span class="btn-icon">🔄</span> Update`;
+  }
 });
 
 // Auto-start (Android works; iOS needs tap)
