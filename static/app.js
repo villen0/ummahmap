@@ -277,6 +277,7 @@ function renderMosques(mosques) {
     list.appendChild(card);
   });
   list.classList.remove("hidden");
+  document.getElementById("btnHideMosques").classList.remove("hidden");
 }
 
 async function loadMosques() {
@@ -303,6 +304,10 @@ async function loadMosques() {
 }
 
 document.getElementById("btnFind").addEventListener("click", loadMosques);
+document.getElementById("btnHideMosques").addEventListener("click", () => {
+  document.getElementById("mosqueList").classList.add("hidden");
+  document.getElementById("btnHideMosques").classList.add("hidden");
+});
 
 
 // ===================== QIBLA =====================
@@ -722,6 +727,10 @@ document.getElementById("btnHadithClose").addEventListener("click", () => {
 
 // ===================== HALAL RESTAURANTS =====================
 document.getElementById("btnFindHalal").addEventListener("click", loadHalalRestaurants);
+document.getElementById("btnHideHalal").addEventListener("click", () => {
+  document.getElementById("halalList").classList.add("hidden");
+  document.getElementById("btnHideHalal").classList.add("hidden");
+});
 
 function renderHalal(restaurants) {
   const list = document.getElementById("halalList");
@@ -755,6 +764,7 @@ function renderHalal(restaurants) {
     list.appendChild(card);
   });
   list.classList.remove("hidden");
+  document.getElementById("btnHideHalal").classList.remove("hidden");
 }
 
 async function loadHalalRestaurants() {
