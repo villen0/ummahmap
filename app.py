@@ -2,7 +2,6 @@ import os
 import math
 import time
 import requests
-from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
 
@@ -36,26 +35,6 @@ def bearing_to_kaaba(lat, lng):
     brng = (math.degrees(math.atan2(y, x)) + 360) % 360
     return brng
 
-def get_place_website(place_id):
-    """Fetch the official website for a place via Places Details API. Returns "" if none."""
-    if not (place_id and GOOGLE_KEY):
-        return ""
-    cache_key = f"website_{place_id}"
-    cached = cache_get(cache_key)
-    if cached is not None:          # "" is a valid cached value meaning "no website"
-        return cached
-    try:
-        r = requests.get(
-            "https://maps.googleapis.com/maps/api/place/details/json",
-            params={"key": GOOGLE_KEY, "place_id": place_id, "fields": "website"},
-            timeout=6
-        )
-        website = r.json().get("result", {}).get("website", "")
-    except Exception:
-        website = ""
-    cache_set(cache_key, website)
-    return website
-
 def haversine_km(lat1, lng1, lat2, lng2):
     R = 6371
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
@@ -82,43 +61,54 @@ def nearby_mosques():
     if cached:
         return jsonify(cached)
 
-    url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-    params = {
-        "key": GOOGLE_KEY,
-        "location": f"{lat},{lng}",
-        "rankby": "distance",
-        "type": "mosque"
+    # New Places API (v1) — Nearby Search
+    url = "https://places.googleapis.com/v1/places:searchNearby"
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_KEY,
+        "X-Goog-FieldMask": (
+            "places.id,places.displayName,places.formattedAddress,"
+            "places.location,places.rating,places.websiteUri,"
+            "places.currentOpeningHours.openNow"
+        )
     }
-    r = requests.get(url, params=params, timeout=15)
+    body = {
+        "includedTypes": ["mosque"],
+        "maxResultCount": limit,
+        "locationRestriction": {
+            "circle": {
+                "center": {"latitude": lat, "longitude": lng},
+                "radius": 10000
+            }
+        },
+        "rankPreference": "DISTANCE"
+    }
+    r = requests.post(url, json=body, headers=headers, timeout=15)
     data = r.json()
 
-    results = data.get("results", [])
+    results = data.get("places", [])
     if not results:
         return jsonify({"error": "No mosques found nearby"}), 404
 
-    top = results[:limit]
-    # Fetch websites in parallel (cached per place_id)
-    with ThreadPoolExecutor(max_workers=len(top) or 1) as ex:
-        websites = list(ex.map(lambda m: get_place_website(m.get("place_id", "")), top))
-
     mosques = []
-    for m, website in zip(top, websites):
-        mlat = m["geometry"]["location"]["lat"]
-        mlng = m["geometry"]["location"]["lng"]
+    for m in results:
+        mlat = m["location"]["latitude"]
+        mlng = m["location"]["longitude"]
+        place_id = m.get("id", "")
         dist_km = haversine_km(lat, lng, mlat, mlng)
         mosques.append({
-            "name": m.get("name"),
-            "place_id": m.get("place_id"),
-            "address": m.get("vicinity") or m.get("formatted_address", ""),
+            "name": m.get("displayName", {}).get("text", ""),
+            "place_id": place_id,
+            "address": m.get("formattedAddress", ""),
             "lat": mlat,
             "lng": mlng,
             "distance_km": round(dist_km, 2),
             "distance_m": round(dist_km * 1000),
             "rating": m.get("rating"),
-            "open_now": m.get("opening_hours", {}).get("open_now"),
-            "website": website or None,
-            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={m.get('place_id','')}",
-            "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{m.get('place_id','')}"
+            "open_now": m.get("currentOpeningHours", {}).get("openNow"),
+            "website": m.get("websiteUri") or None,
+            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
+            "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{place_id}"
         })
 
     payload = {"mosques": mosques, "count": len(mosques)}
@@ -136,36 +126,64 @@ def halal_restaurants():
     cached = cache_get(cache_key)
     if cached:
         return jsonify(cached)
-    url    = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
-    params = {"key": GOOGLE_KEY, "location": f"{lat},{lng}", "rankby": "distance", "type": "restaurant", "keyword": "halal"}
-    r      = requests.get(url, params=params, timeout=15)
-    data   = r.json()
-    results = data.get("results", [])
+
+    # New Places API (v1) — Text Search for halal restaurants
+    url = "https://places.googleapis.com/v1/places:searchText"
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_KEY,
+        "X-Goog-FieldMask": (
+            "places.id,places.displayName,places.formattedAddress,"
+            "places.location,places.rating,places.userRatingCount,"
+            "places.priceLevel,places.websiteUri,"
+            "places.currentOpeningHours.openNow"
+        )
+    }
+    price_map = {
+        "PRICE_LEVEL_FREE": 0,
+        "PRICE_LEVEL_INEXPENSIVE": 1,
+        "PRICE_LEVEL_MODERATE": 2,
+        "PRICE_LEVEL_EXPENSIVE": 3,
+        "PRICE_LEVEL_VERY_EXPENSIVE": 4
+    }
+    body = {
+        "textQuery": "halal restaurant",
+        "maxResultCount": limit,
+        "locationBias": {
+            "circle": {
+                "center": {"latitude": lat, "longitude": lng},
+                "radius": 5000
+            }
+        },
+        "rankPreference": "DISTANCE"
+    }
+    r = requests.post(url, json=body, headers=headers, timeout=15)
+    data = r.json()
+
+    results = data.get("places", [])
     if not results:
         return jsonify({"error": "No halal restaurants found nearby"}), 404
-    top = results[:limit]
-    with ThreadPoolExecutor(max_workers=len(top) or 1) as ex:
-        websites = list(ex.map(lambda m: get_place_website(m.get("place_id", "")), top))
 
     restaurants = []
-    for m, website in zip(top, websites):
-        mlat = m["geometry"]["location"]["lat"]
-        mlng = m["geometry"]["location"]["lng"]
+    for m in results:
+        mlat = m["location"]["latitude"]
+        mlng = m["location"]["longitude"]
+        place_id = m.get("id", "")
         dist_km = haversine_km(lat, lng, mlat, mlng)
         restaurants.append({
-            "name": m.get("name"),
-            "place_id": m.get("place_id"),
-            "address": m.get("vicinity") or m.get("formatted_address", ""),
+            "name": m.get("displayName", {}).get("text", ""),
+            "place_id": place_id,
+            "address": m.get("formattedAddress", ""),
             "lat": mlat, "lng": mlng,
             "distance_km": round(dist_km, 2),
             "distance_m": round(dist_km * 1000),
             "rating": m.get("rating"),
-            "user_ratings_total": m.get("user_ratings_total"),
-            "price_level": m.get("price_level"),
-            "open_now": m.get("opening_hours", {}).get("open_now"),
-            "website": website or None,
-            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={m.get('place_id','')}",
-            "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{m.get('place_id','')}"
+            "user_ratings_total": m.get("userRatingCount"),
+            "price_level": price_map.get(m.get("priceLevel", ""), None),
+            "open_now": m.get("currentOpeningHours", {}).get("openNow"),
+            "website": m.get("websiteUri") or None,
+            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
+            "maps_place_url": f"https://www.google.com/maps/place/?q=place_id:{place_id}"
         })
     payload = {"restaurants": restaurants, "count": len(restaurants)}
     cache_set(cache_key, payload)
