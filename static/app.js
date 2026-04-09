@@ -324,6 +324,11 @@ function rotateArrow(deg) {
   if (el) el.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
 }
 
+function rotateLabels(deg) {
+  const el = document.querySelector(".compass-labels");
+  if (el) el.style.transform = `rotate(${deg}deg)`;
+}
+
 function setBearingText(v) {
   const el = document.getElementById("qiblaBearing");
   if (el) el.textContent = typeof v === "number" && !isNaN(v) ? v.toFixed(1) : "—";
@@ -372,6 +377,7 @@ function handleOrientation(e) {
   if (e.absolute) usingAbsolute = true;
 
   lastHeading = normalizeDeg(heading);
+  rotateLabels(-lastHeading);
   if (typeof qiblaBearing === "number") rotateArrow(normalizeDeg(qiblaBearing - lastHeading));
 }
 
