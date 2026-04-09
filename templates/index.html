@@ -43,8 +43,17 @@
         </select>
       </div>
       <div class="setting-group">
-        <label>Mosques to Show</label>
+        <label>Masjid to Show</label>
         <select id="settingLimit">
+          <option value="3">3 nearest</option>
+          <option value="5" selected>5 nearest</option>
+          <option value="8">8 nearest</option>
+          <option value="10">10 nearest</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Halal Restaurants to Show</label>
+        <select id="settingHalalLimit">
           <option value="3">3 nearest</option>
           <option value="5" selected>5 nearest</option>
           <option value="8">8 nearest</option>
@@ -97,10 +106,10 @@
       <div class="card-header">
         <div class="card-title">
           <span class="card-icon">🕌</span>
-          Nearby Mosques
+          Nearby Masjid
         </div>
         <button class="btn-ghost" id="btnFind">
-          <span class="btn-icon">🔍</span> Find Mosques
+          <span class="btn-icon">🔍</span> Find Masjid
         </button>
       </div>
       <div id="mosqueStatus" class="status-msg hidden"></div>
@@ -260,7 +269,7 @@
   </main>
 
   <footer class="footer">
-    <span>Prayer times via AlAdhan · Mosques &amp; Restaurants via Google Places · Quran via Al-Quran Cloud · Hadith via HadithAPI</span>
+    <span>Prayer times via AlAdhan · Masjid &amp; Restaurants via Google Places · Quran via Al-Quran Cloud · Hadith via HadithAPI</span>
   </footer>
 
   <script src="/static/app.js" defer></script>
