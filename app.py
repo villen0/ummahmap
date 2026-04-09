@@ -57,7 +57,7 @@ def nearby_mosques():
     if not (lat and lng and GOOGLE_KEY):
         return jsonify({"error": "Missing lat/lng or GOOGLE_MAPS_API_KEY"}), 400
 
-    cache_key = f"mosques_{round(lat,3)}_{round(lng,3)}"
+    cache_key = f"mosques_{round(lat,3)}_{round(lng,3)}_{limit}"
     cached = cache_get(cache_key)
     if cached:
         return jsonify(cached)
@@ -124,7 +124,7 @@ def halal_restaurants():
     limit = min(request.args.get("limit", default=5, type=int), 10)
     if not (lat and lng and GOOGLE_KEY):
         return jsonify({"error": "Missing lat/lng or GOOGLE_MAPS_API_KEY"}), 400
-    cache_key = f"halal_{round(lat,3)}_{round(lng,3)}"
+    cache_key = f"halal_{round(lat,3)}_{round(lng,3)}_{limit}"
     cached = cache_get(cache_key)
     if cached:
         return jsonify(cached)

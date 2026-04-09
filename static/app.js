@@ -28,26 +28,30 @@ setInterval(setQuote, 5 * 60 * 1000);
 // ===================== SETTINGS =====================
 function getSettings() {
   return {
-    method: parseInt(localStorage.getItem("um_method") || "2", 10),
-    school:  parseInt(localStorage.getItem("um_school")  || "0", 10),
-    limit:   parseInt(localStorage.getItem("um_limit")   || "5", 10)
+    method:     parseInt(localStorage.getItem("um_method")      || "2", 10),
+    school:     parseInt(localStorage.getItem("um_school")      || "0", 10),
+    limit:      parseInt(localStorage.getItem("um_limit")       || "5", 10),
+    halalLimit: parseInt(localStorage.getItem("um_halal_limit") || "5", 10)
   };
 }
 
 function saveSettings() {
-  const m = document.getElementById("settingMethod").value;
-  const s = document.getElementById("settingSchool").value;
-  const l = document.getElementById("settingLimit").value;
+  const m  = document.getElementById("settingMethod").value;
+  const s  = document.getElementById("settingSchool").value;
+  const l  = document.getElementById("settingLimit").value;
+  const hl = document.getElementById("settingHalalLimit").value;
   localStorage.setItem("um_method", m);
   localStorage.setItem("um_school", s);
   localStorage.setItem("um_limit", l);
+  localStorage.setItem("um_halal_limit", hl);
 }
 
 function applySettingsToUI() {
   const s = getSettings();
-  document.getElementById("settingMethod").value = s.method;
-  document.getElementById("settingSchool").value  = s.school;
-  document.getElementById("settingLimit").value   = s.limit;
+  document.getElementById("settingMethod").value      = s.method;
+  document.getElementById("settingSchool").value      = s.school;
+  document.getElementById("settingLimit").value       = s.limit;
+  document.getElementById("settingHalalLimit").value  = s.halalLimit;
 }
 
 function openSettings() {
@@ -70,7 +74,9 @@ document.getElementById("applySettings").addEventListener("click", () => {
   closeSettings();
   // Re-fetch everything with new settings
   cachedLoc = null;
+  const halalWasShown = !document.getElementById("halalList").classList.contains("hidden");
   startEverything();
+  if (halalWasShown) loadHalalRestaurants();
 });
 
 
@@ -284,7 +290,7 @@ async function loadMosques() {
   const status = document.getElementById("mosqueStatus");
   const list   = document.getElementById("mosqueList");
 
-  status.innerHTML = `<span class="spinner"></span>Finding nearby mosques…`;
+  status.innerHTML = `<span class="spinner"></span>Finding nearby masjid…`;
   status.classList.remove("hidden", "error");
   list.classList.add("hidden");
 
@@ -775,7 +781,7 @@ async function loadHalalRestaurants() {
   list.classList.add("hidden");
   try {
     const loc   = await getLocation();
-    const limit = getSettings().limit;
+    const limit = getSettings().halalLimit;
     const res   = await fetch(`/api/halal_restaurants?lat=${loc.lat}&lng=${loc.lng}&limit=${limit}`);
     const data  = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed");
