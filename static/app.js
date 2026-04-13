@@ -1,3 +1,45 @@
+// ===================== TABS =====================
+(function initTabs() {
+  const VALID_TABS = ['prayer', 'discover', 'quran', 'hadith', 'tools'];
+
+  function switchTab(name) {
+    if (!VALID_TABS.includes(name)) name = 'prayer';
+
+    // Panels
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById('tab-' + name);
+    if (panel) {
+      panel.classList.add('active');
+      // Re-trigger animation on cards inside the newly active panel
+      panel.querySelectorAll('.card').forEach(c => {
+        c.style.animation = 'none';
+        // Force reflow
+        void c.offsetWidth;
+        c.style.animation = '';
+      });
+    }
+
+    // Buttons — both desktop and mobile navs
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      const isActive = b.dataset.tab === name;
+      b.classList.toggle('active', isActive);
+      b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    localStorage.setItem('um_active_tab', name);
+  }
+
+  // Bind click on all tab buttons (desktop + mobile mirror)
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // Restore last active tab (default: prayer)
+  const saved = localStorage.getItem('um_active_tab') || 'prayer';
+  switchTab(saved);
+})();
+
+
 // ===================== QUOTES =====================
 const QUOTES = [
   "Indeed, with hardship comes ease. (Qur'an 94:6)",

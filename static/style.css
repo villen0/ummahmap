@@ -64,11 +64,15 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 10px; }
 * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
 
-/* ===== HEADER ===== */
-.header {
+/* ===== STICKY TOP (header + tabs nav combined) ===== */
+.sticky-top {
   position: sticky;
   top: 0;
   z-index: 100;
+}
+
+/* ===== HEADER ===== */
+.header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1404,4 +1408,187 @@ body {
   color: var(--text3);
   margin-top: 3px;
   font-style: italic;
+}
+
+/* ===== TABS NAVIGATION (desktop — below header) ===== */
+.tabs-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 16px;
+  background: rgba(6,12,20,0.96);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+/* Gold shimmer line at bottom of tab bar */
+.tabs-nav::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(200,149,58,0.35) 20%,
+    rgba(232,184,74,0.55) 50%,
+    rgba(200,149,58,0.35) 80%,
+    transparent 100%);
+  pointer-events: none;
+}
+
+.tab-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  transition: color 0.18s ease, background 0.18s ease;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.25px;
+  position: relative;
+  min-width: 72px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab-icon {
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.tab-label {
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-size: 10px;
+}
+
+.tab-btn:hover {
+  color: var(--text2);
+  background: rgba(255,255,255,0.05);
+}
+.tab-btn:hover .tab-icon { transform: translateY(-1px); }
+
+/* Active tab */
+.tab-btn.active {
+  color: var(--gold2);
+}
+.tab-btn.active .tab-icon { transform: translateY(-1px); }
+
+/* Gold pill indicator */
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--gold), var(--gold2));
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(200,149,58,0.5);
+}
+
+/* ===== TAB PANELS ===== */
+.tab-panel {
+  display: none;
+  flex-direction: column;
+  gap: 18px;
+  animation: tabFadeIn 0.28s ease both;
+}
+.tab-panel.active {
+  display: flex;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Reset card nth-child delays inside panels (cards are now 1st-child of panel) */
+.tab-panel .card:nth-child(1) { animation-delay: 0.04s; }
+.tab-panel .card:nth-child(2) { animation-delay: 0.10s; }
+.tab-panel .card:nth-child(3) { animation-delay: 0.16s; }
+
+/* ===== MOBILE BOTTOM NAV ===== */
+/* The desktop tab nav hides on small screens; a fixed bottom bar takes over */
+.tabs-nav-mobile {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  /* Hide desktop top tab nav */
+  .tabs-nav { display: none; }
+
+  /* Show fixed bottom bar */
+  .tabs-nav-mobile {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    align-items: center;
+    justify-content: space-around;
+    padding: 6px 4px env(safe-area-inset-bottom, 6px);
+    background: rgba(6,12,20,0.97);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--border);
+    gap: 0;
+  }
+
+  /* Top shimmer line on mobile bar */
+  .tabs-nav-mobile::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(200,149,58,0.4) 25%,
+      rgba(232,184,74,0.6) 50%,
+      rgba(200,149,58,0.4) 75%,
+      transparent 100%);
+  }
+
+  .tabs-nav-mobile .tab-btn {
+    flex: 1;
+    min-width: unset;
+    padding: 8px 4px;
+    border-radius: 10px;
+    font-size: 9.5px;
+  }
+
+  .tabs-nav-mobile .tab-icon { font-size: 22px; }
+
+  .tabs-nav-mobile .tab-btn.active::after {
+    bottom: auto;
+    top: 0;
+    width: 24px;
+    height: 3px;
+  }
+
+  /* Pad main content so it clears the fixed bottom bar */
+  .main {
+    padding-bottom: 90px;
+  }
+
+  .footer {
+    padding-bottom: 80px;
+  }
 }
