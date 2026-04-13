@@ -144,6 +144,7 @@ function getLocation() {
 // ===================== HIJRI DATE =====================
 async function setHijriDate() {
   const el = document.getElementById("hijriDate");
+  if (!el) return;
   try {
     const loc = await getLocation();
     const res = await fetch(`/api/prayer_times?lat=${loc.lat}&lng=${loc.lng}&method=${getSettings().method}&school=${getSettings().school}`);
