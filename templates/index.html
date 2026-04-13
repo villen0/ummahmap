@@ -6,7 +6,7 @@
   <title>UmmahMap</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
@@ -67,9 +67,15 @@
   <!-- Header -->
   <header class="header">
     <div class="header-left">
-      <div class="brand-mark">🕌</div>
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 2a10 10 0 100 20A8 8 0 1112 2z" opacity="0.95"/>
+          <path d="M19.5 3.5l.6 1.8H22l-1.6 1.1.6 1.8-1.6-1.2-1.6 1.2.6-1.8L16.8 5.3h1.9z"/>
+        </svg>
+      </div>
       <div>
         <div class="brand-name">UmmahMap</div>
+        <div class="brand-tagline">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
         <div class="hijri-date" id="hijriDate">Loading date…</div>
       </div>
     </div>
@@ -244,9 +250,15 @@
         </div>
         <div class="tasbih-ring-wrap">
           <svg class="tasbih-svg" viewBox="0 0 120 120">
+            <defs>
+              <linearGradient id="tasbihGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#c8953a"/>
+                <stop offset="100%" stop-color="#f5d070"/>
+              </linearGradient>
+            </defs>
             <circle class="tasbih-ring-bg" cx="60" cy="60" r="50"/>
             <circle class="tasbih-ring-fg" id="tasbihRingFg" cx="60" cy="60" r="50"
-                    stroke-dasharray="314.16" stroke-dashoffset="314.16"/>
+                    stroke-dasharray="314.16" stroke-dashoffset="314.16" stroke="url(#tasbihGrad)"/>
           </svg>
           <button class="tasbih-tap-btn" id="btnTasbihTap">
             <span class="tasbih-count" id="tasbihCount">0</span>

@@ -173,6 +173,11 @@ function updateCountdown() {
   cd.innerHTML = `<span>⏱ Next prayer — <b>${next.name}</b> at ${to12h(prayerTimings[next.name])}</span><span class="countdown-time">${formatCountdown(ms)}</span>`;
 }
 
+const ARABIC_PRAYER_NAMES = {
+  Fajr: "الفجر", Sunrise: "الشروق", Dhuhr: "الظهر",
+  Asr: "العصر", Maghrib: "المغرب", Isha: "العشاء"
+};
+
 function renderPrayerCards(timings) {
   const grid = document.getElementById("prayerGpsCards");
   const order = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
@@ -190,7 +195,10 @@ function renderPrayerCards(timings) {
 
     const card = document.createElement("div");
     card.className = `pt-card${isNext ? " is-next" : ""}${isCurrent ? " is-current" : ""}`;
-    card.innerHTML = `<div class="pt-name">${name}</div><div class="pt-time">${to12h(t)}</div>`;
+    card.innerHTML = `
+      <div class="pt-name">${name}</div>
+      <div class="pt-name-ar">${ARABIC_PRAYER_NAMES[name] || ""}</div>
+      <div class="pt-time">${to12h(t)}</div>`;
     grid.appendChild(card);
   });
   grid.classList.remove("hidden");
