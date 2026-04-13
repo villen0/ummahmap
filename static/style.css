@@ -2,46 +2,46 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Backgrounds — warm ivory / parchment */
-  --bg:        #f4f0e8;
+  /* Backgrounds — warm cream, easy on aging eyes */
+  --bg:        #f5f1e9;
   --bg2:       #ffffff;
   --bg3:       #faf7f2;
-  --bg4:       #f0ebe0;
+  --bg4:       #ede8dc;
 
-  /* Borders */
-  --border:    rgba(0,0,0,0.08);
-  --border2:   rgba(0,0,0,0.13);
-  --border3:   rgba(0,0,0,0.22);
+  /* Borders — more visible for low-contrast sensitivity */
+  --border:    rgba(0,0,0,0.13);
+  --border2:   rgba(0,0,0,0.20);
+  --border3:   rgba(0,0,0,0.32);
 
-  /* Gold — warm amber, darkened for light bg contrast */
-  --gold:      #9e6b18;
-  --gold2:     #b87c2a;
-  --gold3:     #d4983e;
-  --gold-dim:  rgba(184,124,42,0.1);
+  /* Gold — rich amber with strong contrast on cream */
+  --gold:      #8a5c10;
+  --gold2:     #a06c1e;
+  --gold3:     #bc832e;
+  --gold-dim:  rgba(160,108,30,0.12);
 
-  /* Emerald — Islamic green, darkened for light bg */
-  --green:        #0a9e6e;
-  --green-dim:    rgba(10,158,110,0.1);
+  /* Emerald — strong readable teal-green */
+  --green:        #087a54;
+  --green-dim:    rgba(8,122,84,0.11);
 
-  /* Text */
-  --text:      #1c1610;
-  --text2:     #6b5c49;
-  --text3:     #a8917a;
+  /* Text — high-contrast for clarity */
+  --text:      #1a1209;   /* near-black, warm */
+  --text2:     #3d3020;   /* dark brown — was too light for seniors */
+  --text3:     #6b5040;   /* medium warm brown — was far too light */
 
-  --red:       #c43030;
+  --red:       #b02020;
 
   /* Shape */
   --radius:    20px;
-  --radius-sm: 12px;
-  --radius-xs: 8px;
+  --radius-sm: 14px;
+  --radius-xs: 10px;
 
   /* Typography */
   --font-body:   'DM Sans', sans-serif;
   --font-arabic: 'Amiri', serif;
 
-  /* Shadows */
-  --shadow-card: 0 2px 18px rgba(100,70,30,0.09), 0 1px 0 rgba(255,255,255,0.85) inset;
-  --shadow-sm:   0 2px 10px rgba(100,70,30,0.1);
+  /* Shadows — slightly more prominent for depth perception */
+  --shadow-card: 0 3px 22px rgba(100,70,30,0.13), 0 1px 0 rgba(255,255,255,0.9) inset;
+  --shadow-sm:   0 2px 12px rgba(100,70,30,0.12);
 }
 
 html { font-size: 16px; }
@@ -55,14 +55,14 @@ body {
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
   background-image:
-    radial-gradient(ellipse 140% 50% at 50% -5%, rgba(255,235,190,0.55) 0%, transparent 65%);
+    radial-gradient(ellipse 140% 50% at 50% -5%, rgba(255,230,170,0.5) 0%, transparent 65%);
 }
 
-/* Thin custom scrollbars */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+/* Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 10px; }
-* { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.15) transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.18); border-radius: 8px; }
+* { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.18) transparent; }
 
 /* ===== STICKY TOP (header + tabs nav combined) ===== */
 .sticky-top {
