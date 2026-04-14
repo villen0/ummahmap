@@ -485,29 +485,43 @@ function startCompass() {
   window.addEventListener("deviceorientation", handleOrientation, true);
 }
 
-async function ensureMotionPermissioniOS() {
-  if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
-    const perm = await DeviceOrientationEvent.requestPermission();
-    if (perm !== "granted") throw new Error("Motion permission denied");
-  }
-}
-
-async function startQiblaLive() {
-  if (startedQibla) return;
+function _doStartCompass() {
   startedQibla = true;
   usingAbsolute = false;
-  try {
-    await ensureMotionPermissioniOS();
-  } catch (e) {
-    console.log("Motion permission:", e.message);
-    startedQibla = false;
-    return;
-  }
   startCompass();
   startLocationWatch();
 }
 
-// Auto-start (Android works without a tap; iOS requires a user gesture for motion permission)
+function startQiblaLive() {
+  if (startedQibla) return;
+  // iOS 13+: DeviceOrientationEvent.requestPermission must be called from a user gesture.
+  // Calling it on page load silently fails — show a button instead.
+  if (typeof DeviceOrientationEvent !== "undefined" &&
+      typeof DeviceOrientationEvent.requestPermission === "function") {
+    const btn = document.getElementById("btnEnableCompass");
+    if (btn) btn.style.display = "";
+    return;
+  }
+  // Android / desktop: no permission needed, start immediately.
+  _doStartCompass();
+}
+
+document.getElementById("btnEnableCompass")?.addEventListener("click", async () => {
+  const btn = document.getElementById("btnEnableCompass");
+  try {
+    const perm = await DeviceOrientationEvent.requestPermission();
+    if (perm !== "granted") {
+      if (btn) btn.textContent = "Permission denied — enable in Settings > Safari > Motion & Orientation";
+      return;
+    }
+    if (btn) btn.style.display = "none";
+    _doStartCompass();
+  } catch (e) {
+    console.error("iOS compass permission error:", e);
+  }
+});
+
+// Auto-start (Android/desktop: immediate; iOS: shows button above instead)
 startQiblaLive();
 
 
