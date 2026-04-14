@@ -1005,7 +1005,19 @@ body {
   direction: rtl;
   margin-bottom: 8px;
 }
-.ayah-translation { font-size: 13.5px; line-height: 1.7; color: var(--text2); }
+.ayah-translation {
+  display: none;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text2);
+}
+.quran-reader-wrap.show-translation-en .ayah-translation-en { display: block; }
+.quran-reader-wrap.show-translation-bn .ayah-translation-bn { display: block; }
+.quran-reader-wrap.show-translation-ur .ayah-translation-ur {
+  display: block;
+  direction: rtl;
+  text-align: right;
+}
 .ayah-num {
   display: inline-flex;
   align-items: center;
@@ -1033,13 +1045,6 @@ body {
   margin-bottom: 3px;
 }
 .quran-reader-wrap.show-translit-en .ayah-translit-en { display: block; }
-.quran-reader-wrap.show-translit-bn .ayah-translit-bn { display: block; }
-.quran-reader-wrap.show-translit-ur .ayah-translit-ur {
-  display: block;
-  direction: rtl;
-  text-align: right;
-  font-style: normal;
-}
 
 /* ===== HADITH ===== */
 .setting-select-inline {

@@ -549,7 +549,8 @@ let surahsLoaded = false;
 let currentSurah = null;
 let ayahOffset = 0;
 const AYAHS_PER_LOAD = 20;
-const translitCache = { en: {}, bn: {}, ur: {} }; // keyed by surah number per language
+const translitCache = { en: {} };             // phonetic: EN only
+const translationCache = { bn: {}, ur: {} }; // translation: BN + UR (EN always fetched)
 
 
 // Toggle surah list
@@ -639,10 +640,10 @@ async function loadMoreAyahs() {
   btn.disabled = true;
 
   try {
-    // Fetch Arabic, English translation, and all three phonetic editions (cached per surah)
+    // Fetch Arabic + all translations in parallel; cache phonetic and BN/UR translations
     let trEn = translitCache.en[surah.number];
-    let trBn = translitCache.bn[surah.number];
-    let trUr = translitCache.ur[surah.number];
+    let trBn = translationCache.bn[surah.number];
+    let trUr = translationCache.ur[surah.number];
     const [arRes, enRes, trEnRes, trBnRes, trUrRes] = await Promise.all([
       fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
       fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
@@ -653,8 +654,8 @@ async function loadMoreAyahs() {
     const arData = await arRes.json();
     const enData = await enRes.json();
     if (trEnRes) { const d = await trEnRes.json(); trEn = d.data?.ayahs || []; translitCache.en[surah.number] = trEn; }
-    if (trBnRes) { const d = await trBnRes.json(); trBn = d.data?.ayahs || []; translitCache.bn[surah.number] = trBn; }
-    if (trUrRes) { const d = await trUrRes.json(); trUr = d.data?.ayahs || []; translitCache.ur[surah.number] = trUr; }
+    if (trBnRes) { const d = await trBnRes.json(); trBn = d.data?.ayahs || []; translationCache.bn[surah.number] = trBn; }
+    if (trUrRes) { const d = await trUrRes.json(); trUr = d.data?.ayahs || []; translationCache.ur[surah.number] = trUr; }
     const arAyahs = arData.data.ayahs;
     const enAyahs = enData.data?.ayahs || [];
     const container = document.getElementById("quranReaderAyahs");
@@ -666,9 +667,9 @@ async function loadMoreAyahs() {
       block.innerHTML = `
         <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(arAyahs[i].numberInSurah)}</span></div>
         <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
-        <div class="ayah-translit ayah-translit-bn">${esc(trBn?.[i]?.text || "")}</div>
-        <div class="ayah-translit ayah-translit-ur">${esc(trUr?.[i]?.text || "")}</div>
-        <div class="ayah-translation">${esc(enAyahs[i]?.text || "")}</div>`;
+        <div class="ayah-translation ayah-translation-en">${esc(enAyahs[i]?.text || "")}</div>
+        <div class="ayah-translation ayah-translation-bn">${esc(trBn?.[i]?.text || "")}</div>
+        <div class="ayah-translation ayah-translation-ur">${esc(trUr?.[i]?.text || "")}</div>`;
       container.appendChild(block);
     }
     ayahOffset = end;
@@ -703,13 +704,23 @@ document.getElementById("btnCloseReader").addEventListener("click", () => {
   document.getElementById("quranReader").classList.add("hidden");
 });
 
-// Transliteration language selector
+// Phonetic selector (English only)
 document.getElementById("selectTranslit").addEventListener("change", () => {
   const reader = document.getElementById("quranReader");
   const val    = document.getElementById("selectTranslit").value;
-  reader.classList.remove("show-translit-en", "show-translit-bn", "show-translit-ur");
-  if (val) reader.classList.add(`show-translit-${val}`);
+  reader.classList.remove("show-translit-en");
+  if (val) reader.classList.add("show-translit-en");
 });
+
+// Translation selector (English / বাংলা / اردو / Off)
+document.getElementById("selectTranslation").addEventListener("change", () => {
+  const reader = document.getElementById("quranReader");
+  const val    = document.getElementById("selectTranslation").value;
+  reader.classList.remove("show-translation-en", "show-translation-bn", "show-translation-ur");
+  if (val) reader.classList.add(`show-translation-${val}`);
+});
+// Set English translation on by default
+document.getElementById("quranReader").classList.add("show-translation-en");
 
 
 
