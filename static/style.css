@@ -1030,9 +1030,40 @@ body {
   color: var(--text3);
   line-height: 1.65;
   font-style: italic;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 .quran-reader-wrap.show-translit .ayah-translit { display: block; }
+
+/* Language label chips before each phonetic row */
+.ayah-translit-en::before,
+.ayah-translit-bn::before,
+.ayah-translit-ur::before {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: var(--gold-dim);
+  color: var(--gold2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.ayah-translit-en::before { content: "EN"; }
+.ayah-translit-bn::before { content: "বাং"; }
+.ayah-translit-ur {
+  direction: rtl;
+  text-align: right;
+  font-style: normal;
+}
+.ayah-translit-ur::before {
+  content: "اردو";
+  direction: ltr;
+  display: inline-block;
+  margin-right: 0;
+  margin-left: 6px;
+  float: right;
+}
 
 /* ===== HADITH ===== */
 .setting-select-inline {

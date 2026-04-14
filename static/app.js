@@ -549,7 +549,7 @@ let surahsLoaded = false;
 let currentSurah = null;
 let ayahOffset = 0;
 const AYAHS_PER_LOAD = 20;
-const translitCache = {}; // keyed by surah number
+const translitCache = { en: {}, bn: {}, ur: {} }; // keyed by surah number per language
 
 
 // Toggle surah list
@@ -639,21 +639,22 @@ async function loadMoreAyahs() {
   btn.disabled = true;
 
   try {
-    // Fetch Arabic, English, and transliteration (translit is cached per surah)
-    let trAyahs = translitCache[surah.number];
-    const [arRes, enRes, trRes] = await Promise.all([
+    // Fetch Arabic, English translation, and all three phonetic editions (cached per surah)
+    let trEn = translitCache.en[surah.number];
+    let trBn = translitCache.bn[surah.number];
+    let trUr = translitCache.ur[surah.number];
+    const [arRes, enRes, trEnRes, trBnRes, trUrRes] = await Promise.all([
       fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
       fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
-      trAyahs ? Promise.resolve(null)
-               : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`)
+      trEn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`),
+      trBn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/bn.bengali`),
+      trUr ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ur.ahmedali`)
     ]);
     const arData = await arRes.json();
     const enData = await enRes.json();
-    if (trRes) {
-      const trData = await trRes.json();
-      trAyahs = trData.data?.ayahs || [];
-      translitCache[surah.number] = trAyahs;
-    }
+    if (trEnRes) { const d = await trEnRes.json(); trEn = d.data?.ayahs || []; translitCache.en[surah.number] = trEn; }
+    if (trBnRes) { const d = await trBnRes.json(); trBn = d.data?.ayahs || []; translitCache.bn[surah.number] = trBn; }
+    if (trUrRes) { const d = await trUrRes.json(); trUr = d.data?.ayahs || []; translitCache.ur[surah.number] = trUr; }
     const arAyahs = arData.data.ayahs;
     const enAyahs = enData.data?.ayahs || [];
     const container = document.getElementById("quranReaderAyahs");
@@ -664,7 +665,9 @@ async function loadMoreAyahs() {
       block.style.animationDelay = `${(i - offset) * 0.03}s`;
       block.innerHTML = `
         <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(arAyahs[i].numberInSurah)}</span></div>
-        <div class="ayah-translit">${esc(trAyahs?.[i]?.text || "")}</div>
+        <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
+        <div class="ayah-translit ayah-translit-bn">${esc(trBn?.[i]?.text || "")}</div>
+        <div class="ayah-translit ayah-translit-ur">${esc(trUr?.[i]?.text || "")}</div>
         <div class="ayah-translation">${esc(enAyahs[i]?.text || "")}</div>`;
       container.appendChild(block);
     }
