@@ -355,14 +355,16 @@ function renderMosques(mosques) {
     card.className = "mosque-card";
     card.style.animationDelay = `${i * 0.05}s`;
     card.innerHTML = `
-      <div class="mosque-rank">${i + 1}</div>
-      <div class="mosque-info">
-        <div class="mosque-name">${esc(m.name)}</div>
-        <div class="mosque-addr">${esc(m.address || "—")}</div>
-        <div class="mosque-tags">
-          <span class="tag tag-dist">📍 ${esc(distLabel(m))}</span>
-          ${openTag}
-          ${ratingTag}
+      <div class="mosque-card-top">
+        <div class="mosque-rank">${i + 1}</div>
+        <div class="mosque-info">
+          <div class="mosque-name">${esc(m.name)}</div>
+          <div class="mosque-addr">${esc(m.address || "—")}</div>
+          <div class="mosque-tags">
+            <span class="tag tag-dist">📍 ${esc(distLabel(m))}</span>
+            ${openTag}
+            ${ratingTag}
+          </div>
         </div>
       </div>
       <div class="mosque-actions">
@@ -858,13 +860,15 @@ function renderHalal(restaurants) {
     card.className = "mosque-card";
     card.style.animationDelay = `${i * 0.05}s`;
     card.innerHTML = `
-      <div class="mosque-rank">${i + 1}</div>
-      <div class="mosque-info">
-        <div class="mosque-name">${esc(r.name)}</div>
-        <div class="mosque-addr">${esc(r.address || "—")}</div>
-        <div class="mosque-tags">
-          <span class="tag tag-dist">📍 ${esc(dist)}</span>
-          ${openTag}${ratingTag}${priceTag}
+      <div class="mosque-card-top">
+        <div class="mosque-rank">${i + 1}</div>
+        <div class="mosque-info">
+          <div class="mosque-name">${esc(r.name)}</div>
+          <div class="mosque-addr">${esc(r.address || "—")}</div>
+          <div class="mosque-tags">
+            <span class="tag tag-dist">📍 ${esc(dist)}</span>
+            ${openTag}${ratingTag}${priceTag}
+          </div>
         </div>
       </div>
       <div class="mosque-actions">
