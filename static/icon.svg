@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#f5f1e9"/>
+  <!-- Outer glow ring -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#a06c1e" stroke-width="3" opacity="0.18"/>
+  <!-- Crescent moon -->
+  <path d="M256 96
+    a160 160 0 1 1 0 320
+    a120 120 0 1 0 0-320z"
+    fill="#a06c1e"/>
+  <!-- Star (5-point) -->
+  <polygon
+    points="340,148 348,172 374,172 353,187 361,211 340,196 319,211 327,187 306,172 332,172"
+    fill="#a06c1e"/>
+</svg>
