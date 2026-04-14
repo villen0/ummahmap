@@ -703,13 +703,12 @@ document.getElementById("btnCloseReader").addEventListener("click", () => {
   document.getElementById("quranReader").classList.add("hidden");
 });
 
-// Transliteration toggle
-document.getElementById("btnTranslitToggle").addEventListener("click", () => {
+// Transliteration language selector
+document.getElementById("selectTranslit").addEventListener("change", () => {
   const reader = document.getElementById("quranReader");
-  const btn    = document.getElementById("btnTranslitToggle");
-  const on     = reader.classList.toggle("show-translit");
-  btn.style.color       = on ? "var(--gold2)" : "";
-  btn.style.borderColor = on ? "var(--gold)"  : "";
+  const val    = document.getElementById("selectTranslit").value;
+  reader.classList.remove("show-translit-en", "show-translit-bn", "show-translit-ur");
+  if (val) reader.classList.add(`show-translit-${val}`);
 });
 
 
