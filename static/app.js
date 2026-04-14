@@ -87,10 +87,11 @@ setInterval(setQuote, 5 * 60 * 1000);
 // ===================== SETTINGS =====================
 function getSettings() {
   return {
-    method:     parseInt(localStorage.getItem("um_method")      || "2", 10),
-    school:     parseInt(localStorage.getItem("um_school")      || "0", 10),
-    limit:      parseInt(localStorage.getItem("um_limit")       || "5", 10),
-    halalLimit: parseInt(localStorage.getItem("um_halal_limit") || "5", 10)
+    method:       parseInt(localStorage.getItem("um_method")         || "2", 10),
+    school:       parseInt(localStorage.getItem("um_school")         || "0", 10),
+    limit:        parseInt(localStorage.getItem("um_limit")          || "5", 10),
+    halalLimit:   parseInt(localStorage.getItem("um_halal_limit")    || "5", 10),
+    groceryLimit: parseInt(localStorage.getItem("um_grocery_limit")  || "5", 10)
   };
 }
 
@@ -99,18 +100,21 @@ function saveSettings() {
   const s  = document.getElementById("settingSchool").value;
   const l  = document.getElementById("settingLimit").value;
   const hl = document.getElementById("settingHalalLimit").value;
+  const gl = document.getElementById("settingGroceryLimit").value;
   localStorage.setItem("um_method", m);
   localStorage.setItem("um_school", s);
   localStorage.setItem("um_limit", l);
   localStorage.setItem("um_halal_limit", hl);
+  localStorage.setItem("um_grocery_limit", gl);
 }
 
 function applySettingsToUI() {
   const s = getSettings();
-  document.getElementById("settingMethod").value      = s.method;
-  document.getElementById("settingSchool").value      = s.school;
-  document.getElementById("settingLimit").value       = s.limit;
-  document.getElementById("settingHalalLimit").value  = s.halalLimit;
+  document.getElementById("settingMethod").value        = s.method;
+  document.getElementById("settingSchool").value        = s.school;
+  document.getElementById("settingLimit").value         = s.limit;
+  document.getElementById("settingHalalLimit").value    = s.halalLimit;
+  document.getElementById("settingGroceryLimit").value  = s.groceryLimit;
 }
 
 function openSettings() {
@@ -131,11 +135,12 @@ document.getElementById("settingsOverlay").addEventListener("click", closeSettin
 document.getElementById("applySettings").addEventListener("click", () => {
   saveSettings();
   closeSettings();
-  // Re-fetch everything with new settings
   cachedLoc = null;
-  const halalWasShown = !document.getElementById("halalList").classList.contains("hidden");
+  const halalWasShown   = !document.getElementById("halalList").classList.contains("hidden");
+  const groceryWasShown = !document.getElementById("groceryList").classList.contains("hidden");
   startEverything();
-  if (halalWasShown) loadHalalRestaurants();
+  if (halalWasShown)   loadHalalRestaurants();
+  if (groceryWasShown) loadHalalGrocery();
 });
 
 
@@ -896,6 +901,69 @@ async function loadHalalRestaurants() {
     const data  = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed");
     renderHalal(data.restaurants);
+    status.classList.add("hidden");
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    status.classList.add("error");
+  }
+}
+
+
+// ===================== HALAL GROCERY =====================
+document.getElementById("btnFindGrocery").addEventListener("click", loadHalalGrocery);
+document.getElementById("btnHideGrocery").addEventListener("click", () => {
+  document.getElementById("groceryList").classList.add("hidden");
+  document.getElementById("btnHideGrocery").classList.add("hidden");
+});
+
+function renderGrocery(stores) {
+  const list = document.getElementById("groceryList");
+  list.innerHTML = "";
+  stores.forEach((r, i) => {
+    const openTag   = r.open_now === true  ? `<span class="tag tag-open">Open now</span>`
+                    : r.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
+    const ratingTag = r.rating ? `<span class="tag tag-rating">★ ${r.rating}</span>` : "";
+    const dist      = r.distance_m < 1000 ? `${r.distance_m}m away` : `${r.distance_km} km away`;
+    const card = document.createElement("div");
+    card.className = "mosque-card";
+    card.style.animationDelay = `${i * 0.05}s`;
+    card.innerHTML = `
+      <div class="mosque-card-top">
+        <div class="mosque-rank">${i + 1}</div>
+        <div class="mosque-info">
+          <div class="mosque-name">${esc(r.name)}</div>
+          <div class="mosque-addr">${esc(r.address || "—")}</div>
+          <div class="mosque-tags">
+            <span class="tag tag-dist">📍 ${esc(dist)}</span>
+            ${openTag}${ratingTag}
+          </div>
+        </div>
+      </div>
+      <div class="mosque-actions">
+        <a href="${safeUrl(r.maps_directions_url)}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
+        ${r.website
+          ? `<a href="${safeUrl(r.website)}" target="_blank" rel="noopener" class="link-btn">🌐 Website</a>`
+          : `<a href="${safeUrl(r.maps_place_url)}" target="_blank" rel="noopener" class="link-btn">Details</a>`}
+      </div>`;
+    list.appendChild(card);
+  });
+  list.classList.remove("hidden");
+  document.getElementById("btnHideGrocery").classList.remove("hidden");
+}
+
+async function loadHalalGrocery() {
+  const status = document.getElementById("groceryStatus");
+  const list   = document.getElementById("groceryList");
+  status.innerHTML = `<span class="spinner"></span>Finding halal grocery stores…`;
+  status.classList.remove("hidden", "error");
+  list.classList.add("hidden");
+  try {
+    const loc   = await getLocation();
+    const limit = getSettings().groceryLimit;
+    const res   = await fetch(`/api/halal_grocery?lat=${loc.lat}&lng=${loc.lng}&limit=${limit}`);
+    const data  = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+    renderGrocery(data.stores);
     status.classList.add("hidden");
   } catch (e) {
     status.textContent = `Error: ${e.message}`;
