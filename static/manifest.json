@@ -1,0 +1,18 @@
+{
+  "name": "UmmahMap",
+  "short_name": "UmmahMap",
+  "description": "Islamic companion — prayer times, Qibla, Quran, Hadith & Tasbih",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f1e9",
+  "theme_color": "#a06c1e",
+  "icons": [
+    {
+      "src": "/static/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

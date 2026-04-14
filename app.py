@@ -210,6 +210,13 @@ def prayer_times():
     if not (lat and lng):
         return jsonify({"error": "Missing lat/lng"}), 400
 
+    # Validate enumerated parameters
+    VALID_METHODS = {1,2,3,4,5,7,8,9,10,11,12,13,14,15,16,17,99}
+    if method not in VALID_METHODS:
+        method = 2
+    if school not in (0, 1):
+        school = 0
+
     cache_key = f"prayer_{round(lat,3)}_{round(lng,3)}_{method}_{school}"
     cached = cache_get(cache_key)
     if cached:
@@ -221,7 +228,7 @@ def prayer_times():
     data = r.json()
 
     if data.get("code") != 200:
-        return jsonify({"error": "Failed to fetch prayer times", "raw": data}), 502
+        return jsonify({"error": "Failed to fetch prayer times"}), 502
 
     timings = data["data"]["timings"]
     meta = data["data"]["meta"]
@@ -280,8 +287,8 @@ def hadith_list(collection):
     per_page = min(request.args.get("per_page", default=30, type=int), 50)
     try:
         col = load_hadith_collection(collection)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 503
+    except Exception:
+        return jsonify({"error": "Could not load collection"}), 503
     hadiths     = col["hadiths"]
     sections    = col["sections"]
     sorted_nums = sorted(hadiths.keys())
@@ -305,8 +312,8 @@ def hadith(collection, num):
         return jsonify({"error": "Unknown collection"}), 400
     try:
         col = load_hadith_collection(collection)
-    except Exception as e:
-        return jsonify({"error": f"Could not load collection: {e}"}), 503
+    except Exception:
+        return jsonify({"error": "Could not load collection"}), 503
     h = col["hadiths"].get(num)
     if not h:
         return jsonify({"error": f"Hadith {num} not found in {collection}"}), 404
@@ -334,8 +341,8 @@ def hadith_search(collection):
         return jsonify({"error": "Missing search query"}), 400
     try:
         col = load_hadith_collection(collection)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 503
+    except Exception:
+        return jsonify({"error": "Could not load collection"}), 503
 
     q_lower = q.lower()
     hadiths = col["hadiths"]
