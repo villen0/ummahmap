@@ -69,6 +69,15 @@
           <option value="10">10 nearest</option>
         </select>
       </div>
+      <div class="setting-group">
+        <label>Halal Grocery to Show</label>
+        <select id="settingGroceryLimit">
+          <option value="3">3 nearest</option>
+          <option value="5" selected>5 nearest</option>
+          <option value="8">8 nearest</option>
+          <option value="10">10 nearest</option>
+        </select>
+      </div>
       <button class="btn-primary full-width" id="applySettings">Apply &amp; Refresh</button>
     </div>
   </aside>
@@ -209,6 +218,17 @@
         <div id="halalStatus" class="status-msg hidden"></div>
         <div id="halalList" class="mosque-list hidden"></div>
         <button class="btn-ghost full-width hidden" id="btnHideHalal" style="margin-top:10px">✕ Hide results</button>
+      </section>
+
+      <!-- Halal Grocery -->
+      <section class="card" id="sectionGrocery">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">🛒</span> Halal Grocery</div>
+          <button class="btn-ghost" id="btnFindGrocery"><span class="btn-icon">📍</span> Find Nearby</button>
+        </div>
+        <div id="groceryStatus" class="status-msg hidden"></div>
+        <div id="groceryList" class="mosque-list hidden"></div>
+        <button class="btn-ghost full-width hidden" id="btnHideGrocery" style="margin-top:10px">✕ Hide results</button>
       </section>
 
     </div><!-- /tab-discover -->
