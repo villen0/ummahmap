@@ -463,14 +463,19 @@ body {
 
 .mosque-card {
   display: flex;
-  align-items: flex-start;
-  gap: 14px;
+  flex-direction: column;
+  gap: 10px;
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 14px 15px;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
   animation: fadeUp 0.3s ease both;
+}
+.mosque-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 }
 .mosque-card:hover {
   border-color: rgba(184,124,42,0.25);
@@ -540,24 +545,25 @@ body {
 
 .mosque-actions {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
+  flex-direction: row;
+  gap: 8px;
 }
 
 .link-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 9px;
   border: 1px solid var(--border2);
   background: rgba(0,0,0,0.04);
   color: var(--text2);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
+  flex: 1;
   transition: all 0.18s;
 }
 .link-btn:hover { background: rgba(0,0,0,0.08); color: var(--text); }
@@ -699,12 +705,21 @@ body {
   letter-spacing: 0;
 }
 
-.qibla-hint {
-  font-size: 12.5px;
-  color: var(--text3);
-  line-height: 1.6;
-  max-width: 240px;
+.btn-enable-compass {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  border: 1.5px solid rgba(160,108,30,0.4);
+  background: var(--gold-dim);
+  color: var(--gold2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s;
 }
+.btn-enable-compass:hover { background: rgba(200,149,58,0.2); border-color: rgba(160,108,30,0.6); }
 
 /* ===== SETTINGS PANEL ===== */
 .overlay {
@@ -820,13 +835,10 @@ body {
   .quote-wrap { text-align: left; }
   .prayer-grid { grid-template-columns: repeat(2, 1fr); }
   .qibla-body { flex-direction: column; align-items: flex-start; }
-  .mosque-actions { flex-direction: row; }
   .bearing-display { font-size: 34px; }
 }
 @media (max-width: 380px) {
   .prayer-grid { grid-template-columns: repeat(2, 1fr); }
-  .mosque-card { flex-wrap: wrap; }
-  .mosque-actions { flex-direction: row; }
 }
 
 /* ===== QURAN ===== */
