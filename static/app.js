@@ -905,6 +905,40 @@ async function loadHalalRestaurants() {
 
 
 // ===================== TASBIH =====================
+// Cross-platform haptic feedback:
+// Android/desktop → Web Vibration API
+// iOS Safari      → Web Audio API (short tone click, since vibrate is unsupported)
+let _audioCtx = null;
+function _getAudioCtx() {
+  if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return _audioCtx;
+}
+function _playClick(freq, duration, volume, delay) {
+  try {
+    const ctx  = _getAudioCtx();
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    const t = ctx.currentTime + (delay || 0);
+    gain.gain.setValueAtTime(volume, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.start(t);
+    osc.stop(t + duration + 0.01);
+  } catch (e) {}
+}
+function hapticTap() {
+  if (navigator.vibrate) { navigator.vibrate(30); return; }
+  _playClick(880, 0.035, 0.18);
+}
+function hapticComplete() {
+  if (navigator.vibrate) { navigator.vibrate([100, 50, 100]); return; }
+  _playClick(660, 0.07, 0.28, 0);
+  _playClick(880, 0.07, 0.28, 0.13);
+}
+
 let tasbihCount = 0;
 let tasbihGoal  = 33;
 
@@ -920,9 +954,9 @@ function tasbihUpdateRing() {
 document.getElementById("btnTasbihTap").addEventListener("click", () => {
   tasbihCount++;
   tasbihUpdateRing();
-  if (navigator.vibrate) navigator.vibrate(30);
+  hapticTap();
   if (tasbihCount === tasbihGoal) {
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    hapticComplete();
     document.getElementById("btnTasbihTap").classList.add("tasbih-complete");
   }
 });
