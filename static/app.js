@@ -1,3 +1,20 @@
+// ===================== SECURITY HELPERS =====================
+// Escape HTML special chars before inserting into innerHTML
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+// Only allow http/https URLs — blocks javascript: and data: URIs
+function safeUrl(url) {
+  if (typeof url !== "string") return "#";
+  return /^https?:\/\//i.test(url.trim()) ? url : "#";
+}
+
+
 // ===================== TABS =====================
 (function initTabs() {
   const VALID_TABS = ['prayer', 'discover', 'quran', 'hadith', 'tools'];
@@ -277,9 +294,9 @@ async function loadPrayerTimes() {
     }
     const cleanHijriMonth = (data.hijri?.month?.en || "").normalize("NFD").replace(/[\u0300-\u036f]/g,"");
     meta.innerHTML = `
-      <span><b>Timezone:</b> ${data.timezone || "—"}</span>
-      <span><b>Method:</b> ${data.method?.name || "—"}</span>
-      <span><b>Date:</b> ${gregDate || "—"} · ${data.hijri?.day || ""} ${cleanHijriMonth} ${data.hijri?.year || ""} AH</span>
+      <span><b>Timezone:</b> ${esc(data.timezone || "—")}</span>
+      <span><b>Method:</b> ${esc(data.method?.name || "—")}</span>
+      <span><b>Date:</b> ${esc(gregDate || "—")} · ${esc(data.hijri?.day || "")} ${esc(cleanHijriMonth)} ${esc(data.hijri?.year || "")} AH</span>
     `;
     meta.classList.remove("hidden");
     status.classList.add("hidden");
@@ -340,19 +357,19 @@ function renderMosques(mosques) {
     card.innerHTML = `
       <div class="mosque-rank">${i + 1}</div>
       <div class="mosque-info">
-        <div class="mosque-name">${m.name}</div>
-        <div class="mosque-addr">${m.address || "—"}</div>
+        <div class="mosque-name">${esc(m.name)}</div>
+        <div class="mosque-addr">${esc(m.address || "—")}</div>
         <div class="mosque-tags">
-          <span class="tag tag-dist">📍 ${distLabel(m)}</span>
+          <span class="tag tag-dist">📍 ${esc(distLabel(m))}</span>
           ${openTag}
           ${ratingTag}
         </div>
       </div>
       <div class="mosque-actions">
-        <a href="${m.maps_directions_url}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
+        <a href="${safeUrl(m.maps_directions_url)}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
         ${m.website
-          ? `<a href="${m.website}" target="_blank" rel="noopener" class="link-btn">🌐 Website</a>`
-          : `<a href="${m.maps_place_url}" target="_blank" rel="noopener" class="link-btn">Details</a>`}
+          ? `<a href="${safeUrl(m.website)}" target="_blank" rel="noopener" class="link-btn">🌐 Website</a>`
+          : `<a href="${safeUrl(m.maps_place_url)}" target="_blank" rel="noopener" class="link-btn">Details</a>`}
       </div>
     `;
     list.appendChild(card);
@@ -546,12 +563,12 @@ async function loadSurahList() {
       const btn = document.createElement("button");
       btn.className = "surah-item";
       btn.innerHTML = `
-        <div class="surah-num-badge">${s.number}</div>
+        <div class="surah-num-badge">${esc(s.number)}</div>
         <div class="surah-item-info">
-          <div class="surah-item-en">${s.englishName} <span style="color:var(--text3);font-size:11.5px">${s.englishNameTranslation}</span></div>
-          <div class="surah-item-meta">${s.numberOfAyahs} verses · ${s.revelationType}</div>
+          <div class="surah-item-en">${esc(s.englishName)} <span style="color:var(--text3);font-size:11.5px">${esc(s.englishNameTranslation)}</span></div>
+          <div class="surah-item-meta">${esc(s.numberOfAyahs)} verses · ${esc(s.revelationType)}</div>
         </div>
-        <div class="surah-item-ar">${s.name}</div>`;
+        <div class="surah-item-ar">${esc(s.name)}</div>`;
       btn.addEventListener("click", () => openSurah(s));
       wrap.appendChild(btn);
     });
@@ -582,9 +599,9 @@ async function openSurah(surah) {
   const reader = document.getElementById("quranReader");
   reader.classList.remove("hidden");
   document.getElementById("quranReaderHeader").innerHTML = `
-    <span class="qr-ar">${surah.name}</span>
-    <div class="qr-en">${surah.englishName} — ${surah.englishNameTranslation}</div>
-    <div class="qr-meta">${surah.numberOfAyahs} verses · ${surah.revelationType}</div>`;
+    <span class="qr-ar">${esc(surah.name)}</span>
+    <div class="qr-en">${esc(surah.englishName)} — ${esc(surah.englishNameTranslation)}</div>
+    <div class="qr-meta">${esc(surah.numberOfAyahs)} verses · ${esc(surah.revelationType)}</div>`;
   document.getElementById("quranReaderAyahs").innerHTML = "";
   document.getElementById("btnLoadMoreAyahs").classList.add("hidden");
   updateSurahNavButtons();
@@ -625,9 +642,9 @@ async function loadMoreAyahs() {
       block.className = "ayah-block";
       block.style.animationDelay = `${(i - offset) * 0.03}s`;
       block.innerHTML = `
-        <div class="ayah-arabic">${arAyahs[i].text} <span class="ayah-num">${arAyahs[i].numberInSurah}</span></div>
-        <div class="ayah-translit">${trAyahs?.[i]?.text || ""}</div>
-        <div class="ayah-translation">${enAyahs[i]?.text || ""}</div>`;
+        <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(arAyahs[i].numberInSurah)}</span></div>
+        <div class="ayah-translit">${esc(trAyahs?.[i]?.text || "")}</div>
+        <div class="ayah-translation">${esc(enAyahs[i]?.text || "")}</div>`;
       container.appendChild(block);
     }
     ayahOffset = end;
@@ -712,10 +729,10 @@ async function loadHadithBrowser(reset = false) {
       const btn = document.createElement("button");
       btn.className = "hadith-browse-item";
       btn.innerHTML = `
-        <div class="hadith-browse-num">${h.number}</div>
+        <div class="hadith-browse-num">${esc(h.number)}</div>
         <div class="hadith-browse-info">
-          <div class="hadith-browse-snippet">${h.snippet}</div>
-          ${h.chapter ? `<div class="hadith-browse-chapter">${h.chapter}</div>` : ""}
+          <div class="hadith-browse-snippet">${esc(h.snippet)}</div>
+          ${h.chapter ? `<div class="hadith-browse-chapter">${esc(h.chapter)}</div>` : ""}
         </div>`;
       btn.addEventListener("click", () => {
         fetchHadith(col, h.number);
@@ -829,18 +846,18 @@ function renderHalal(restaurants) {
     card.innerHTML = `
       <div class="mosque-rank">${i + 1}</div>
       <div class="mosque-info">
-        <div class="mosque-name">${r.name}</div>
-        <div class="mosque-addr">${r.address || "—"}</div>
+        <div class="mosque-name">${esc(r.name)}</div>
+        <div class="mosque-addr">${esc(r.address || "—")}</div>
         <div class="mosque-tags">
-          <span class="tag tag-dist">📍 ${dist}</span>
+          <span class="tag tag-dist">📍 ${esc(dist)}</span>
           ${openTag}${ratingTag}${priceTag}
         </div>
       </div>
       <div class="mosque-actions">
-        <a href="${r.maps_directions_url}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
+        <a href="${safeUrl(r.maps_directions_url)}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
         ${r.website
-          ? `<a href="${r.website}" target="_blank" rel="noopener" class="link-btn">🌐 Website</a>`
-          : `<a href="${r.maps_place_url}" target="_blank" rel="noopener" class="link-btn">Details</a>`}
+          ? `<a href="${safeUrl(r.website)}" target="_blank" rel="noopener" class="link-btn">🌐 Website</a>`
+          : `<a href="${safeUrl(r.maps_place_url)}" target="_blank" rel="noopener" class="link-btn">Details</a>`}
       </div>`;
     list.appendChild(card);
   });
