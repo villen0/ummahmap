@@ -999,6 +999,7 @@ function tasbihUpdateRing() {
 }
 
 document.getElementById("btnTasbihTap").addEventListener("click", () => {
+  if (tasbihCount >= tasbihGoal) return;   // hard stop at goal
   tasbihCount++;
   tasbihUpdateRing();
   if (navigator.vibrate) navigator.vibrate(30);
