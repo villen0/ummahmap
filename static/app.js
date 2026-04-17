@@ -187,18 +187,45 @@ async function setHijriDate() {
 // ===================== ADHAN AUDIO =====================
 const adhanPlayed = new Set();
 let adhanDateKey = new Date().toDateString();
+let audioUnlocked = false;
+
+// iOS/mobile browsers block audio without a prior user gesture.
+// Silently unlock the audio element on the first tap anywhere.
+function tryUnlockAudio() {
+  if (audioUnlocked) return;
+  const audio = document.getElementById("adhanAudio");
+  if (!audio) return;
+  audio.play().then(() => { audio.pause(); audio.currentTime = 0; audioUnlocked = true; }).catch(() => {});
+}
+document.addEventListener("touchstart", tryUnlockAudio, { once: true });
+document.addEventListener("click",      tryUnlockAudio, { once: true });
 
 function playAdhan(prayerName) {
   const audio  = document.getElementById("adhanAudio");
   const banner = document.getElementById("adhanBanner");
+  const label  = banner.querySelector("span");
   audio.src = prayerName === "Fajr"
     ? "https://cdn.islamic.network/adhan/audio/en.alafasy/adhan-fajr.mp3"
     : "https://cdn.islamic.network/adhan/audio/en.alafasy/adhan.mp3";
-  audio.play().then(() => banner.classList.remove("hidden")).catch(() => {});
+  label.textContent = "🔔 Adhan playing…";
+  banner.onclick = null;
+  banner.classList.remove("hidden");
+  audio.play().catch(() => {
+    // Autoplay blocked (iOS) — prompt user to tap the banner
+    label.textContent = `🔔 ${prayerName} — Tap to hear Adhan`;
+    banner.style.cursor = "pointer";
+    banner.onclick = () => {
+      audio.play().catch(() => {});
+      label.textContent = "🔔 Adhan playing…";
+      banner.onclick = null;
+      banner.style.cursor = "";
+    };
+  });
   audio.onended = () => banner.classList.add("hidden");
 }
 
-document.getElementById("btnStopAdhan")?.addEventListener("click", () => {
+document.getElementById("btnStopAdhan")?.addEventListener("click", (e) => {
+  e.stopPropagation();
   const audio = document.getElementById("adhanAudio");
   audio.pause();
   audio.currentTime = 0;
