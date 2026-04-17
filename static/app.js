@@ -91,7 +91,8 @@ function getSettings() {
     school:       parseInt(localStorage.getItem("um_school")         || "0", 10),
     limit:        parseInt(localStorage.getItem("um_limit")          || "5", 10),
     halalLimit:   parseInt(localStorage.getItem("um_halal_limit")    || "5", 10),
-    groceryLimit: parseInt(localStorage.getItem("um_grocery_limit")  || "5", 10)
+    groceryLimit: parseInt(localStorage.getItem("um_grocery_limit")  || "5", 10),
+    adhan:        localStorage.getItem("um_adhan") === "1"
   };
 }
 
@@ -101,11 +102,13 @@ function saveSettings() {
   const l  = document.getElementById("settingLimit").value;
   const hl = document.getElementById("settingHalalLimit").value;
   const gl = document.getElementById("settingGroceryLimit").value;
+  const ad = document.getElementById("settingAdhan").value;
   localStorage.setItem("um_method", m);
   localStorage.setItem("um_school", s);
   localStorage.setItem("um_limit", l);
   localStorage.setItem("um_halal_limit", hl);
   localStorage.setItem("um_grocery_limit", gl);
+  localStorage.setItem("um_adhan", ad);
 }
 
 function applySettingsToUI() {
@@ -115,6 +118,7 @@ function applySettingsToUI() {
   document.getElementById("settingLimit").value         = s.limit;
   document.getElementById("settingHalalLimit").value    = s.halalLimit;
   document.getElementById("settingGroceryLimit").value  = s.groceryLimit;
+  document.getElementById("settingAdhan").value         = s.adhan ? "1" : "0";
 }
 
 function openSettings() {
@@ -180,6 +184,28 @@ async function setHijriDate() {
 }
 
 
+// ===================== ADHAN AUDIO =====================
+const adhanPlayed = new Set();
+let adhanDateKey = new Date().toDateString();
+
+function playAdhan(prayerName) {
+  const audio  = document.getElementById("adhanAudio");
+  const banner = document.getElementById("adhanBanner");
+  audio.src = prayerName === "Fajr"
+    ? "https://cdn.islamic.network/adhan/audio/en.alafasy/adhan-fajr.mp3"
+    : "https://cdn.islamic.network/adhan/audio/en.alafasy/adhan.mp3";
+  audio.play().then(() => banner.classList.remove("hidden")).catch(() => {});
+  audio.onended = () => banner.classList.add("hidden");
+}
+
+document.getElementById("btnStopAdhan")?.addEventListener("click", () => {
+  const audio = document.getElementById("adhanAudio");
+  audio.pause();
+  audio.currentTime = 0;
+  document.getElementById("adhanBanner").classList.add("hidden");
+});
+
+
 // ===================== PRAYER TIMES =====================
 let prayerTimings = null;
 let countdownInterval = null;
@@ -236,6 +262,24 @@ function updateCountdown() {
   if (ms < 0) { cd.classList.add("hidden"); return; }
   cd.classList.remove("hidden");
   cd.innerHTML = `<span>⏱ Next prayer — <b>${next.name}</b> at ${to12h(prayerTimings[next.name])}</span><span class="countdown-time">${formatCountdown(ms)}</span>`;
+
+  // Adhan: play once within a 3-minute window after prayer time
+  if (getSettings().adhan) {
+    const today = new Date().toDateString();
+    if (today !== adhanDateKey) { adhanPlayed.clear(); adhanDateKey = today; }
+    const now = new Date();
+    for (const name of ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]) {
+      const t = parseTime(prayerTimings[name]);
+      if (!t) continue;
+      const diff = now - t;
+      const key  = `${today}-${name}`;
+      if (diff >= 0 && diff < 3 * 60 * 1000 && !adhanPlayed.has(key)) {
+        adhanPlayed.add(key);
+        playAdhan(name);
+        break;
+      }
+    }
+  }
 }
 
 const ARABIC_PRAYER_NAMES = {
