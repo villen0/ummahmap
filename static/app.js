@@ -300,7 +300,7 @@ function updateCountdown() {
       if (!t) continue;
       const diff = now - t;
       const key  = `${today}-${name}`;
-      if (diff >= 0 && diff < 3 * 60 * 1000 && !adhanPlayed.has(key)) {
+      if (diff >= 0 && diff < 10 * 60 * 1000 && !adhanPlayed.has(key)) {
         adhanPlayed.add(key);
         playAdhan(name);
         break;
@@ -308,6 +308,12 @@ function updateCountdown() {
     }
   }
 }
+
+// When app returns to foreground (tab switch, screen wake), check immediately
+// — avoids missing Adhan due to background timer throttling
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && prayerTimings) updateCountdown();
+});
 
 const ARABIC_PRAYER_NAMES = {
   Fajr: "الفجر", Sunrise: "الشروق", Dhuhr: "الظهر",
