@@ -48,6 +48,18 @@ def haversine_km(lat1, lng1, lat2, lng2):
 def home():
     return render_template("index.html", app_name="UmmahMap")
 
+@app.route("/.well-known/assetlinks.json")
+def assetlinks():
+    data = [{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "org.ummahmap.twa",
+            "sha256_cert_fingerprints": ["PLACEHOLDER_REPLACE_AFTER_BUBBLEWRAP"]
+        }
+    }]
+    return jsonify(data)
+
 @app.route("/api/nearby_mosques")
 def nearby_mosques():
     lat = request.args.get("lat", type=float)
