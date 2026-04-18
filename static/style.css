@@ -813,34 +813,6 @@ body {
 .setting-group select:focus { border-color: rgba(200,149,58,0.6); }
 
 
-/* ===== ADHAN BANNER ===== */
-.adhan-banner {
-  position: fixed;
-  bottom: calc(72px + env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--gold2);
-  color: #fff;
-  border-radius: 24px;
-  padding: 10px 18px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  z-index: 300;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-  white-space: nowrap;
-}
-.adhan-banner.hidden { display: none; }
-.adhan-banner .btn-ghost {
-  color: #fff;
-  border-color: rgba(255,255,255,0.5);
-  padding: 4px 10px;
-  font-size: 12px;
-}
-
-
 /* ===== LOADING SPINNER ===== */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
