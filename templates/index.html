@@ -20,6 +20,39 @@
 </head>
 <body>
 
+  <!-- Report Issue Panel -->
+  <div id="reportOverlay" class="overlay hidden"></div>
+  <aside id="reportPanel" class="settings-panel hidden">
+    <div class="settings-header">
+      <h3>Report an Issue</h3>
+      <button class="icon-btn" id="closeReport">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="setting-group">
+        <label>Issue Type</label>
+        <select id="reportType">
+          <option value="Bug">Bug / Something broken</option>
+          <option value="Prayer Times">Prayer times incorrect</option>
+          <option value="Qibla">Qibla direction wrong</option>
+          <option value="Mosque">Mosque info incorrect</option>
+          <option value="Quran / Hadith">Quran / Hadith content</option>
+          <option value="Feature Request">Feature request</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Description</label>
+        <textarea id="reportDescription" class="report-textarea" rows="5" placeholder="Please describe the issue…" maxlength="2000"></textarea>
+      </div>
+      <div class="setting-group">
+        <label>Your Email (optional)</label>
+        <input type="email" id="reportEmail" class="report-input" placeholder="so we can follow up" maxlength="200" />
+      </div>
+      <div id="reportStatus" class="status-msg hidden"></div>
+      <button class="btn-primary full-width" id="btnSubmitReport">Send Report</button>
+    </div>
+  </aside>
+
   <!-- Settings Panel -->
   <div id="settingsOverlay" class="overlay hidden"></div>
   <aside id="settingsPanel" class="settings-panel hidden">
@@ -94,6 +127,13 @@
         <div class="quote-wrap" id="quoteWrap">
           <div class="quote-text" id="quote"></div>
         </div>
+        <button class="settings-btn report-btn" id="openReport" title="Report an Issue" aria-label="Report an Issue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </button>
         <button class="settings-btn" id="openSettings" title="Settings" aria-label="Settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <circle cx="12" cy="12" r="3"/>

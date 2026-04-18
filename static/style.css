@@ -812,6 +812,24 @@ body {
 }
 .setting-group select:focus { border-color: rgba(200,149,58,0.6); }
 
+.report-textarea,
+.report-input {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  padding: 10px 12px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+  resize: vertical;
+}
+.report-textarea:focus,
+.report-input:focus { border-color: rgba(200,149,58,0.6); }
+.report-textarea { min-height: 100px; }
+
 
 /* ===== LOADING SPINNER ===== */
 @keyframes spin { to { transform: rotate(360deg); } }

@@ -144,6 +144,68 @@ document.getElementById("applySettings").addEventListener("click", () => {
 });
 
 
+// ===================== REPORT ISSUE =====================
+function openReport() {
+  document.getElementById("reportPanel").classList.remove("hidden");
+  document.getElementById("reportOverlay").classList.remove("hidden");
+  document.getElementById("reportStatus").classList.add("hidden");
+  document.getElementById("reportDescription").value = "";
+  document.getElementById("reportEmail").value = "";
+  document.getElementById("reportType").selectedIndex = 0;
+}
+
+function closeReport() {
+  document.getElementById("reportPanel").classList.add("hidden");
+  document.getElementById("reportOverlay").classList.add("hidden");
+}
+
+document.getElementById("openReport").addEventListener("click", openReport);
+document.getElementById("closeReport").addEventListener("click", closeReport);
+document.getElementById("reportOverlay").addEventListener("click", closeReport);
+
+document.getElementById("btnSubmitReport").addEventListener("click", async () => {
+  const type = document.getElementById("reportType").value;
+  const description = document.getElementById("reportDescription").value.trim();
+  const email = document.getElementById("reportEmail").value.trim();
+  const status = document.getElementById("reportStatus");
+  const btn = document.getElementById("btnSubmitReport");
+
+  if (!description) {
+    status.textContent = "Please describe the issue before sending.";
+    status.classList.remove("hidden");
+    status.classList.add("error");
+    return;
+  }
+
+  btn.disabled = true;
+  status.innerHTML = '<span class="spinner"></span> Sending…';
+  status.classList.remove("hidden", "error");
+
+  try {
+    const res = await fetch("/api/report_issue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, description, email })
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.textContent = "Thank you! Your report has been sent.";
+      status.classList.remove("error");
+      document.getElementById("reportDescription").value = "";
+      document.getElementById("reportEmail").value = "";
+      setTimeout(closeReport, 2000);
+    } else {
+      throw new Error(data.error || "Unknown error");
+    }
+  } catch (e) {
+    status.textContent = "Failed to send. Please try again later.";
+    status.classList.add("error");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+
 // ===================== LOCATION =====================
 let cachedLoc = null;
 

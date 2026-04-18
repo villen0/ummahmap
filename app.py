@@ -1,7 +1,10 @@
 import os
 import math
 import time
+import smtplib
 import requests
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from urllib.parse import quote_plus
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
@@ -437,6 +440,43 @@ def hadith_search(collection):
                 break
 
     return jsonify({"results": results, "total": len(results), "query": q})
+
+
+@app.route("/api/report_issue", methods=["POST"])
+def report_issue():
+    data = request.get_json(silent=True) or {}
+    issue_type = str(data.get("type", "General")).strip()[:100]
+    description = str(data.get("description", "")).strip()[:2000]
+    user_email = str(data.get("email", "")).strip()[:200]
+
+    if not description:
+        return jsonify({"error": "Description is required"}), 400
+
+    gmail_user = "ummahmap.org@gmail.com"
+    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "")
+
+    if not gmail_pass:
+        return jsonify({"error": "Email service not configured"}), 503
+
+    body = f"Issue Type: {issue_type}\n"
+    if user_email:
+        body += f"From: {user_email}\n"
+    body += f"\n{description}"
+
+    msg = MIMEMultipart()
+    msg["From"] = gmail_user
+    msg["To"] = gmail_user
+    msg["Subject"] = f"[UmmahMap Report] {issue_type}"
+    msg.attach(MIMEText(body, "plain"))
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(gmail_user, gmail_pass)
+            server.sendmail(gmail_user, gmail_user, msg.as_string())
+    except Exception as e:
+        return jsonify({"error": "Failed to send report"}), 500
+
+    return jsonify({"success": True})
 
 
 if __name__ == "__main__":
