@@ -787,16 +787,24 @@ async function loadMoreAyahs() {
         <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
         <div class="ayah-translation ayah-translation-en">${esc(enAyahs[i]?.text || "")}</div>
         <div class="ayah-translation ayah-translation-bn">${esc(trBn?.[i]?.text || "")}</div>
-        <div class="ayah-translation ayah-translation-ur">${esc(trUr?.[i]?.text || "")}</div>`;
+        <div class="ayah-translation ayah-translation-ur">${esc(trUr?.[i]?.text || "")}</div>
+        <div class="ayah-footer"></div>`;
       const bmBtn = document.createElement("button");
-      bmBtn.className = "ayah-bookmark-btn" + (isBookmarked(surah.number, ayahNum) ? " bookmarked" : "");
+      const alreadyBm = isBookmarked(surah.number, ayahNum);
+      bmBtn.className = "ayah-bookmark-btn" + (alreadyBm ? " bookmarked" : "");
       bmBtn.title = "Bookmark this ayah";
-      bmBtn.innerHTML = "🔖";
+      bmBtn.innerHTML = alreadyBm ? "🔖 Bookmarked" : "🔖 Bookmark";
       bmBtn.addEventListener("click", () => {
         const added = toggleBookmark(surah.number, ayahNum, surah.englishName, surah.name);
-        bmBtn.classList.toggle("bookmarked", added);
+        if (added) {
+          bmBtn.classList.add("bookmarked");
+          bmBtn.innerHTML = "🔖 Bookmarked";
+        } else {
+          bmBtn.classList.remove("bookmarked");
+          bmBtn.innerHTML = "🔖 Bookmark";
+        }
       });
-      block.appendChild(bmBtn);
+      block.querySelector(".ayah-footer").appendChild(bmBtn);
       container.appendChild(block);
     }
     ayahOffset = end;

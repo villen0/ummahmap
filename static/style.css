@@ -1020,8 +1020,7 @@ body {
 .qr-meta { font-size: 11.5px; color: var(--text3); margin-top: 4px; }
 
 .ayah-block {
-  position: relative;
-  padding: 15px 0 15px 0;
+  padding: 15px 0;
   border-bottom: 1px solid var(--border);
   animation: fadeUp 0.3s ease both;
 }
@@ -1111,22 +1110,33 @@ body {
 .bookmark-ref { font-size: 13px; font-weight: 600; color: var(--text); }
 .bookmark-ar  { font-family: var(--font-arabic); font-size: 16px; color: var(--gold2); }
 
-.ayah-bookmark-btn {
-  position: absolute;
-  top: 14px;
-  right: 0;
-  background: none;
-  border: none;
-  font-size: 14px;
-  cursor: pointer;
-  opacity: 0.25;
-  transition: opacity 0.15s, transform 0.15s;
-  padding: 2px 4px;
-  line-height: 1;
+.ayah-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
-.ayah-bookmark-btn:hover,
-.ayah-bookmark-btn.bookmarked { opacity: 1; }
-.ayah-bookmark-btn.bookmarked { transform: scale(1.2); }
+.ayah-bookmark-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text3);
+  padding: 3px 10px;
+  font-family: var(--font-body);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ayah-bookmark-btn:hover {
+  background: var(--gold-dim);
+  border-color: rgba(200,149,58,0.35);
+  color: var(--gold);
+}
+.ayah-bookmark-btn.bookmarked {
+  background: var(--gold-dim);
+  border-color: rgba(200,149,58,0.4);
+  color: var(--gold);
+  font-weight: 600;
+}
 
 /* ===== HADITH ===== */
 .setting-select-inline {
