@@ -146,6 +146,7 @@ document.getElementById("applySettings").addEventListener("click", () => {
 
 // ===================== REPORT ISSUE =====================
 function openReport() {
+  closeSettings();
   document.getElementById("reportPanel").classList.remove("hidden");
   document.getElementById("reportOverlay").classList.remove("hidden");
   document.getElementById("reportStatus").classList.add("hidden");
