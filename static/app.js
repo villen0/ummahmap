@@ -247,13 +247,13 @@ function renderBookmarkSection() {
   ).join("");
   list.querySelectorAll(".bookmark-card").forEach(card => {
     card.addEventListener("click", async () => {
-      // surahsData may be empty if user never expanded the surah list
       try { await ensureSurahData(); } catch { return; }
       const s = surahsData.find(x => x.number === +card.dataset.surah);
-      if (s) {
-        await openSurah(s);
-        await scrollToAyah(+card.dataset.ayah);
-      }
+      if (!s) return;
+      _pendingScrollAyah = +card.dataset.ayah;
+      await openSurah(s);
+      await scrollToAyah(_pendingScrollAyah);
+      _pendingScrollAyah = null;
     });
   });
 }
@@ -670,6 +670,7 @@ let surahsData = [];
 let surahsLoaded = false;
 let currentSurah = null;
 let ayahOffset = 0;
+let _pendingScrollAyah = null;
 const AYAHS_PER_LOAD = 20;
 const translitCache = { en: {} };             // phonetic: EN only
 const translationCache = { bn: {}, ur: {} }; // translation: BN + UR (EN always fetched)
@@ -854,7 +855,14 @@ async function loadMoreAyahs() {
   }
 }
 
-document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAyahs);
+document.getElementById("btnLoadMoreAyahs").addEventListener("click", async () => {
+  await loadMoreAyahs();
+  if (_pendingScrollAyah !== null) {
+    const target = _pendingScrollAyah;
+    _pendingScrollAyah = null;
+    await scrollToAyah(target);
+  }
+});
 document.getElementById("btnPrevSurah").addEventListener("click", () => navigateSurah(-1));
 document.getElementById("btnNextSurah").addEventListener("click", () => navigateSurah(1));
 document.getElementById("btnNextSurahBottom").addEventListener("click", () => navigateSurah(1));
