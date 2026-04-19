@@ -207,6 +207,60 @@ document.getElementById("btnSubmitReport").addEventListener("click", async () =>
 });
 
 
+// ===================== QURAN BOOKMARKS =====================
+const BM_KEY = "um_quran_bookmarks";
+
+function getBookmarks() {
+  try { return JSON.parse(localStorage.getItem(BM_KEY)) || []; }
+  catch { return []; }
+}
+function saveBookmarks(bms) {
+  localStorage.setItem(BM_KEY, JSON.stringify(bms));
+}
+function isBookmarked(surahNum, ayahNum) {
+  return getBookmarks().some(b => b.surah === surahNum && b.ayah === ayahNum);
+}
+function toggleBookmark(surahNum, ayahNum, surahName, surahAr) {
+  let bms = getBookmarks();
+  const idx = bms.findIndex(b => b.surah === surahNum && b.ayah === ayahNum);
+  if (idx >= 0) {
+    bms.splice(idx, 1);
+  } else {
+    bms.unshift({ surah: surahNum, ayah: ayahNum, surahName, surahAr });
+    if (bms.length > 20) bms = bms.slice(0, 20);
+  }
+  saveBookmarks(bms);
+  renderBookmarkSection();
+  return idx < 0;
+}
+function renderBookmarkSection() {
+  const bms = getBookmarks();
+  const wrap = document.getElementById("quranBookmarks");
+  const list = document.getElementById("bookmarkList");
+  if (!bms.length) { wrap.classList.add("hidden"); return; }
+  wrap.classList.remove("hidden");
+  list.innerHTML = bms.map(b =>
+    `<button class="bookmark-card" data-surah="${b.surah}" data-ayah="${b.ayah}">
+      <span class="bookmark-ref">${esc(b.surahName)} &middot; Ayah ${b.ayah}</span>
+      <span class="bookmark-ar">${esc(b.surahAr)}</span>
+    </button>`
+  ).join("");
+  list.querySelectorAll(".bookmark-card").forEach(card => {
+    card.addEventListener("click", () => {
+      const s = surahsData.find(x => x.number === +card.dataset.surah);
+      if (s) openSurah(s);
+    });
+  });
+}
+
+document.getElementById("btnClearBookmarks").addEventListener("click", () => {
+  saveBookmarks([]);
+  renderBookmarkSection();
+});
+
+renderBookmarkSection();
+
+
 // ===================== LOCATION =====================
 let cachedLoc = null;
 
@@ -727,12 +781,22 @@ async function loadMoreAyahs() {
       const block = document.createElement("div");
       block.className = "ayah-block";
       block.style.animationDelay = `${(i - offset) * 0.03}s`;
+      const ayahNum = arAyahs[i].numberInSurah;
       block.innerHTML = `
-        <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(arAyahs[i].numberInSurah)}</span></div>
+        <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(ayahNum)}</span></div>
         <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
         <div class="ayah-translation ayah-translation-en">${esc(enAyahs[i]?.text || "")}</div>
         <div class="ayah-translation ayah-translation-bn">${esc(trBn?.[i]?.text || "")}</div>
         <div class="ayah-translation ayah-translation-ur">${esc(trUr?.[i]?.text || "")}</div>`;
+      const bmBtn = document.createElement("button");
+      bmBtn.className = "ayah-bookmark-btn" + (isBookmarked(surah.number, ayahNum) ? " bookmarked" : "");
+      bmBtn.title = "Bookmark this ayah";
+      bmBtn.innerHTML = "🔖";
+      bmBtn.addEventListener("click", () => {
+        const added = toggleBookmark(surah.number, ayahNum, surah.englishName, surah.name);
+        bmBtn.classList.toggle("bookmarked", added);
+      });
+      block.appendChild(bmBtn);
       container.appendChild(block);
     }
     ayahOffset = end;
