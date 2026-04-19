@@ -1095,20 +1095,31 @@ tasbihUpdateRing(); // initialise ring on load
 // ===================== PWA INSTALL BANNER =====================
 (function initInstallBanner() {
   const DISMISSED_KEY = "um_install_dismissed";
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone;
+
+  // Already installed — never show banner
+  if (isStandalone) { localStorage.setItem(DISMISSED_KEY, "1"); return; }
   if (localStorage.getItem(DISMISSED_KEY)) return;
 
-  const banner  = document.getElementById("installBanner");
-  const btnInstall  = document.getElementById("btnInstall");
-  const btnDismiss  = document.getElementById("btnInstallDismiss");
+  const banner     = document.getElementById("installBanner");
+  const btnInstall = document.getElementById("btnInstall");
+  const btnDismiss = document.getElementById("btnInstallDismiss");
+  const iosGuide   = document.getElementById("iosInstallGuide");
+  const btnIosClose = document.getElementById("btnIosGuideClose");
 
   let deferredPrompt = null;
 
   function dismissBanner() {
     banner.classList.add("hidden");
+    iosGuide.classList.add("hidden");
     localStorage.setItem(DISMISSED_KEY, "1");
   }
 
   btnDismiss.addEventListener("click", dismissBanner);
+  btnIosClose.addEventListener("click", () => iosGuide.classList.add("hidden"));
 
   // Chrome / Edge / Android — native install prompt
   window.addEventListener("beforeinstallprompt", (e) => {
@@ -1119,27 +1130,20 @@ tasbihUpdateRing(); // initialise ring on load
 
   btnInstall.addEventListener("click", async () => {
     if (deferredPrompt) {
+      // Android/Chrome: trigger native prompt
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       deferredPrompt = null;
       dismissBanner();
-    } else {
-      // iOS Safari — no beforeinstallprompt; show share instructions
-      btnInstall.textContent = "Tap Share → Add to Home Screen";
-      btnInstall.style.fontSize = "11px";
-      btnInstall.style.padding = "8px 10px";
-      setTimeout(dismissBanner, 5000);
+    } else if (isIos) {
+      // iOS: show step-by-step guide
+      banner.classList.add("hidden");
+      iosGuide.classList.remove("hidden");
     }
   });
 
-  // On iOS, show banner after 3 s if not already installed
-  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
-    || window.navigator.standalone;
-  if (isIos && !isStandalone) {
+  // iOS: show banner after 3 s
+  if (isIos) {
     setTimeout(() => banner.classList.remove("hidden"), 3000);
   }
-
-  // Hide banner if already installed (standalone mode)
-  if (isStandalone) localStorage.setItem(DISMISSED_KEY, "1");
 })();
