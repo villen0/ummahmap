@@ -246,9 +246,12 @@ function renderBookmarkSection() {
     </button>`
   ).join("");
   list.querySelectorAll(".bookmark-card").forEach(card => {
-    card.addEventListener("click", () => {
+    card.addEventListener("click", async () => {
       const s = surahsData.find(x => x.number === +card.dataset.surah);
-      if (s) openSurah(s);
+      if (s) {
+        await openSurah(s);
+        await scrollToAyah(+card.dataset.ayah);
+      }
     });
   });
 }
@@ -749,6 +752,18 @@ async function openSurah(surah) {
   await loadMoreAyahs();
 }
 
+async function scrollToAyah(ayahNum) {
+  // Load batches until the target ayah is in the DOM
+  while (ayahOffset < ayahNum && ayahOffset < currentSurah.numberOfAyahs) {
+    await loadMoreAyahs();
+  }
+  const block = document.querySelector(`#quranReaderAyahs [data-ayah="${ayahNum}"]`);
+  if (!block) return;
+  block.scrollIntoView({ behavior: "smooth", block: "center" });
+  block.classList.add("ayah-highlight");
+  setTimeout(() => block.classList.remove("ayah-highlight"), 2000);
+}
+
 async function loadMoreAyahs() {
   const surah = currentSurah;
   const offset = ayahOffset;
@@ -780,6 +795,7 @@ async function loadMoreAyahs() {
     for (let i = offset; i < end; i++) {
       const block = document.createElement("div");
       block.className = "ayah-block";
+      block.dataset.ayah = ayahNum;
       block.style.animationDelay = `${(i - offset) * 0.03}s`;
       const ayahNum = arAyahs[i].numberInSurah;
       block.innerHTML = `
