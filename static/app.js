@@ -780,11 +780,11 @@ async function loadMoreAyahs() {
     const container = document.getElementById("quranReaderAyahs");
     const end = Math.min(offset + AYAHS_PER_LOAD, arAyahs.length);
     for (let i = offset; i < end; i++) {
+      const ayahNum = arAyahs[i].numberInSurah;
       const block = document.createElement("div");
       block.className = "ayah-block";
       block.dataset.ayah = ayahNum;
       block.style.animationDelay = `${(i - offset) * 0.03}s`;
-      const ayahNum = arAyahs[i].numberInSurah;
       block.innerHTML = `
         <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(ayahNum)}</span></div>
         <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
