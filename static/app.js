@@ -249,11 +249,7 @@ function renderBookmarkSection() {
     card.addEventListener("click", async () => {
       try { await ensureSurahData(); } catch { return; }
       const s = surahsData.find(x => x.number === +card.dataset.surah);
-      if (!s) return;
-      _pendingScrollAyah = +card.dataset.ayah;
-      await openSurah(s);
-      await scrollToAyah(_pendingScrollAyah);
-      _pendingScrollAyah = null;
+      if (s) openSurah(s);
     });
   });
 }
@@ -670,7 +666,6 @@ let surahsData = [];
 let surahsLoaded = false;
 let currentSurah = null;
 let ayahOffset = 0;
-let _pendingScrollAyah = null;
 const AYAHS_PER_LOAD = 20;
 const translitCache = { en: {} };             // phonetic: EN only
 const translationCache = { bn: {}, ur: {} }; // translation: BN + UR (EN always fetched)
@@ -755,22 +750,6 @@ async function openSurah(surah) {
   await loadMoreAyahs();
 }
 
-async function scrollToAyah(ayahNum) {
-  let guard = 0;
-  while (ayahOffset < ayahNum && ayahOffset < currentSurah.numberOfAyahs && guard < 30) {
-    const before = ayahOffset;
-    await loadMoreAyahs();
-    if (ayahOffset === before) break; // no progress — stop to avoid infinite loop
-    guard++;
-  }
-  const block = document.querySelector(`#quranReaderAyahs [data-ayah="${ayahNum}"]`);
-  if (!block) return;
-  setTimeout(() => {
-    block.scrollIntoView({ behavior: "smooth", block: "center" });
-    block.classList.add("ayah-highlight");
-    setTimeout(() => block.classList.remove("ayah-highlight"), 2000);
-  }, 150); // slight delay so rendering settles
-}
 
 async function loadMoreAyahs() {
   const surah = currentSurah;
@@ -855,14 +834,7 @@ async function loadMoreAyahs() {
   }
 }
 
-document.getElementById("btnLoadMoreAyahs").addEventListener("click", async () => {
-  await loadMoreAyahs();
-  if (_pendingScrollAyah !== null) {
-    const target = _pendingScrollAyah;
-    _pendingScrollAyah = null;
-    await scrollToAyah(target);
-  }
-});
+document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAyahs);
 document.getElementById("btnPrevSurah").addEventListener("click", () => navigateSurah(-1));
 document.getElementById("btnNextSurah").addEventListener("click", () => navigateSurah(1));
 document.getElementById("btnNextSurahBottom").addEventListener("click", () => navigateSurah(1));
