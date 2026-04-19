@@ -247,6 +247,8 @@ function renderBookmarkSection() {
   ).join("");
   list.querySelectorAll(".bookmark-card").forEach(card => {
     card.addEventListener("click", async () => {
+      // surahsData may be empty if user never expanded the surah list
+      try { await ensureSurahData(); } catch { return; }
       const s = surahsData.find(x => x.number === +card.dataset.surah);
       if (s) {
         await openSurah(s);
@@ -753,15 +755,20 @@ async function openSurah(surah) {
 }
 
 async function scrollToAyah(ayahNum) {
-  // Load batches until the target ayah is in the DOM
-  while (ayahOffset < ayahNum && ayahOffset < currentSurah.numberOfAyahs) {
+  let guard = 0;
+  while (ayahOffset < ayahNum && ayahOffset < currentSurah.numberOfAyahs && guard < 30) {
+    const before = ayahOffset;
     await loadMoreAyahs();
+    if (ayahOffset === before) break; // no progress — stop to avoid infinite loop
+    guard++;
   }
   const block = document.querySelector(`#quranReaderAyahs [data-ayah="${ayahNum}"]`);
   if (!block) return;
-  block.scrollIntoView({ behavior: "smooth", block: "center" });
-  block.classList.add("ayah-highlight");
-  setTimeout(() => block.classList.remove("ayah-highlight"), 2000);
+  setTimeout(() => {
+    block.scrollIntoView({ behavior: "smooth", block: "center" });
+    block.classList.add("ayah-highlight");
+    setTimeout(() => block.classList.remove("ayah-highlight"), 2000);
+  }, 150); // slight delay so rendering settles
 }
 
 async function loadMoreAyahs() {
