@@ -1090,3 +1090,56 @@ document.querySelectorAll(".tasbih-goal-btn").forEach(btn => {
 });
 
 tasbihUpdateRing(); // initialise ring on load
+
+
+// ===================== PWA INSTALL BANNER =====================
+(function initInstallBanner() {
+  const DISMISSED_KEY = "um_install_dismissed";
+  if (localStorage.getItem(DISMISSED_KEY)) return;
+
+  const banner  = document.getElementById("installBanner");
+  const btnInstall  = document.getElementById("btnInstall");
+  const btnDismiss  = document.getElementById("btnInstallDismiss");
+
+  let deferredPrompt = null;
+
+  function dismissBanner() {
+    banner.classList.add("hidden");
+    localStorage.setItem(DISMISSED_KEY, "1");
+  }
+
+  btnDismiss.addEventListener("click", dismissBanner);
+
+  // Chrome / Edge / Android — native install prompt
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    setTimeout(() => banner.classList.remove("hidden"), 3000);
+  });
+
+  btnInstall.addEventListener("click", async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      dismissBanner();
+    } else {
+      // iOS Safari — no beforeinstallprompt; show share instructions
+      btnInstall.textContent = "Tap Share → Add to Home Screen";
+      btnInstall.style.fontSize = "11px";
+      btnInstall.style.padding = "8px 10px";
+      setTimeout(dismissBanner, 5000);
+    }
+  });
+
+  // On iOS, show banner after 3 s if not already installed
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone;
+  if (isIos && !isStandalone) {
+    setTimeout(() => banner.classList.remove("hidden"), 3000);
+  }
+
+  // Hide banner if already installed (standalone mode)
+  if (isStandalone) localStorage.setItem(DISMISSED_KEY, "1");
+})();
