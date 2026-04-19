@@ -408,8 +408,8 @@ document.getElementById("btnHideTasbih").addEventListener("click", () => {
 
 // ===================== MOSQUES =====================
 function distLabel(m) {
-  if (m.distance_m < 1000) return `${m.distance_m}m away`;
-  return `${m.distance_km} km away`;
+  const mi = m.distance_km * 0.621371;
+  return mi < 0.1 ? `${Math.round(mi * 5280)} ft away` : `${mi.toFixed(1)} mi away`;
 }
 
 function renderMosques(mosques) {
@@ -936,7 +936,7 @@ function renderHalal(restaurants) {
                     : r.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
     const ratingTag = r.rating ? `<span class="tag tag-rating">★ ${r.rating}</span>` : "";
     const priceTag  = r.price_level ? `<span class="tag tag-dist">${PRICE[r.price_level]}</span>` : "";
-    const dist      = r.distance_m < 1000 ? `${r.distance_m}m away` : `${r.distance_km} km away`;
+    const dist      = (() => { const mi = r.distance_km * 0.621371; return mi < 0.1 ? `${Math.round(mi * 5280)} ft away` : `${mi.toFixed(1)} mi away`; })();
     const card = document.createElement("div");
     card.className = "mosque-card";
     card.style.animationDelay = `${i * 0.05}s`;
@@ -999,7 +999,7 @@ function renderGrocery(stores) {
     const openTag   = r.open_now === true  ? `<span class="tag tag-open">Open now</span>`
                     : r.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
     const ratingTag = r.rating ? `<span class="tag tag-rating">★ ${r.rating}</span>` : "";
-    const dist      = r.distance_m < 1000 ? `${r.distance_m}m away` : `${r.distance_km} km away`;
+    const dist      = (() => { const mi = r.distance_km * 0.621371; return mi < 0.1 ? `${Math.round(mi * 5280)} ft away` : `${mi.toFixed(1)} mi away`; })();
     const card = document.createElement("div");
     card.className = "mosque-card";
     card.style.animationDelay = `${i * 0.05}s`;

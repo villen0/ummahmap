@@ -94,7 +94,7 @@ def nearby_mosques():
         "locationRestriction": {
             "circle": {
                 "center": {"latitude": lat, "longitude": lng},
-                "radius": 10000
+                "radius": 50000
             }
         },
         "rankPreference": "DISTANCE"
@@ -169,7 +169,7 @@ def halal_restaurants():
         "locationBias": {
             "circle": {
                 "center": {"latitude": lat, "longitude": lng},
-                "radius": 5000
+                "radius": 50000
             }
         },
         "rankPreference": "DISTANCE"
@@ -235,7 +235,7 @@ def halal_grocery():
         "locationBias": {
             "circle": {
                 "center": {"latitude": lat, "longitude": lng},
-                "radius": 10000
+                "radius": 50000
             }
         },
         "rankPreference": "DISTANCE"
