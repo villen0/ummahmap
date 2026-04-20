@@ -737,6 +737,9 @@ async function openSurah(surah) {
   ayahOffset   = 0;
   try { await ensureSurahData(); } catch {}
   document.getElementById("btnNextSurahBottom").style.display = "none";
+  // Collapse surah browser so only the reader is visible
+  document.getElementById("surahListWrap").classList.add("hidden");
+  document.getElementById("btnToggleSurahList").textContent = "Show all surahs ▾";
   // Show reader
   const reader = document.getElementById("quranReader");
   reader.classList.remove("hidden");
@@ -747,7 +750,6 @@ async function openSurah(surah) {
   document.getElementById("quranReaderAyahs").innerHTML = "";
   document.getElementById("btnLoadMoreAyahs").classList.add("hidden");
   updateSurahNavButtons();
-  // Scroll to reader
   reader.scrollIntoView({ behavior: "smooth", block: "start" });
   await loadMoreAyahs();
 }
@@ -855,6 +857,7 @@ document.getElementById("btnNextSurah").addEventListener("click", () => navigate
 document.getElementById("btnNextSurahBottom").addEventListener("click", () => navigateSurah(1));
 document.getElementById("btnCloseReader").addEventListener("click", () => {
   document.getElementById("quranReader").classList.add("hidden");
+  document.getElementById("quranSurahBrowser").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 // Phonetic selector (English only)
