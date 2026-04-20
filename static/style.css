@@ -1138,6 +1138,16 @@ body {
   font-weight: 600;
 }
 
+@keyframes ayahPulse {
+  0%   { background: rgba(160,108,30,0.18); }
+  60%  { background: rgba(160,108,30,0.08); }
+  100% { background: transparent; }
+}
+.ayah-highlight {
+  border-radius: 8px;
+  animation: ayahPulse 2s ease forwards;
+}
+
 
 /* ===== HADITH ===== */
 .setting-select-inline {

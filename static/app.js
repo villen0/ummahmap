@@ -249,7 +249,9 @@ function renderBookmarkSection() {
     card.addEventListener("click", async () => {
       try { await ensureSurahData(); } catch { return; }
       const s = surahsData.find(x => x.number === +card.dataset.surah);
-      if (s) openSurah(s);
+      if (!s) return;
+      await openSurah(s);
+      await scrollToAyah(+card.dataset.ayah);
     });
   });
 }
@@ -751,87 +753,100 @@ async function openSurah(surah) {
 }
 
 
+// Core fetch+render — no button state touched. Returns { end, total }.
+async function renderAyahBatch(surah, offset) {
+  let trEn = translitCache.en[surah.number];
+  let trBn = translationCache.bn[surah.number];
+  let trUr = translationCache.ur[surah.number];
+  const [arRes, enRes, trEnRes, trBnRes, trUrRes] = await Promise.all([
+    fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
+    fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
+    trEn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`),
+    trBn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/bn.bengali`),
+    trUr ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ur.ahmedali`)
+  ]);
+  const arData = await arRes.json();
+  const enData = await enRes.json();
+  if (trEnRes) { const d = await trEnRes.json(); trEn = d.data?.ayahs || []; translitCache.en[surah.number] = trEn; }
+  if (trBnRes) { const d = await trBnRes.json(); trBn = d.data?.ayahs || []; translationCache.bn[surah.number] = trBn; }
+  if (trUrRes) { const d = await trUrRes.json(); trUr = d.data?.ayahs || []; translationCache.ur[surah.number] = trUr; }
+  const arAyahs = arData.data.ayahs;
+  const enAyahs = enData.data?.ayahs || [];
+  const container = document.getElementById("quranReaderAyahs");
+  const end = Math.min(offset + AYAHS_PER_LOAD, arAyahs.length);
+  for (let i = offset; i < end; i++) {
+    const ayahNum = arAyahs[i].numberInSurah;
+    const block = document.createElement("div");
+    block.className = "ayah-block";
+    block.dataset.ayah = ayahNum;
+    block.style.animationDelay = `${(i - offset) * 0.03}s`;
+    block.innerHTML = `
+      <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(ayahNum)}</span></div>
+      <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
+      <div class="ayah-translation ayah-translation-en">${esc(enAyahs[i]?.text || "")}</div>
+      <div class="ayah-translation ayah-translation-bn">${esc(trBn?.[i]?.text || "")}</div>
+      <div class="ayah-translation ayah-translation-ur">${esc(trUr?.[i]?.text || "")}</div>
+      <div class="ayah-footer"></div>`;
+    const bmBtn = document.createElement("button");
+    const alreadyBm = isBookmarked(surah.number, ayahNum);
+    bmBtn.className = "ayah-bookmark-btn" + (alreadyBm ? " bookmarked" : "");
+    bmBtn.title = "Bookmark this ayah";
+    bmBtn.innerHTML = alreadyBm ? "🔖 Bookmarked" : "🔖 Bookmark";
+    bmBtn.addEventListener("click", () => {
+      const added = toggleBookmark(surah.number, ayahNum, surah.englishName, surah.name);
+      if (added) { bmBtn.classList.add("bookmarked"); bmBtn.innerHTML = "🔖 Bookmarked"; }
+      else        { bmBtn.classList.remove("bookmarked"); bmBtn.innerHTML = "🔖 Bookmark"; }
+    });
+    block.querySelector(".ayah-footer").appendChild(bmBtn);
+    container.appendChild(block);
+  }
+  ayahOffset = end;
+  return { end, total: surah.numberOfAyahs };
+}
+
+// User-facing load — manages button state, calls renderAyahBatch.
 async function loadMoreAyahs() {
   const surah = currentSurah;
   const offset = ayahOffset;
   const btn = document.getElementById("btnLoadMoreAyahs");
   btn.innerHTML = '<span class="spinner"></span> Loading…';
   btn.disabled = true;
-
   try {
-    // Fetch Arabic + all translations in parallel; cache phonetic and BN/UR translations
-    let trEn = translitCache.en[surah.number];
-    let trBn = translationCache.bn[surah.number];
-    let trUr = translationCache.ur[surah.number];
-    const [arRes, enRes, trEnRes, trBnRes, trUrRes] = await Promise.all([
-      fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
-      fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
-      trEn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`),
-      trBn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/bn.bengali`),
-      trUr ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ur.ahmedali`)
-    ]);
-    const arData = await arRes.json();
-    const enData = await enRes.json();
-    if (trEnRes) { const d = await trEnRes.json(); trEn = d.data?.ayahs || []; translitCache.en[surah.number] = trEn; }
-    if (trBnRes) { const d = await trBnRes.json(); trBn = d.data?.ayahs || []; translationCache.bn[surah.number] = trBn; }
-    if (trUrRes) { const d = await trUrRes.json(); trUr = d.data?.ayahs || []; translationCache.ur[surah.number] = trUr; }
-    const arAyahs = arData.data.ayahs;
-    const enAyahs = enData.data?.ayahs || [];
-    const container = document.getElementById("quranReaderAyahs");
-    const end = Math.min(offset + AYAHS_PER_LOAD, arAyahs.length);
-    for (let i = offset; i < end; i++) {
-      const ayahNum = arAyahs[i].numberInSurah;
-      const block = document.createElement("div");
-      block.className = "ayah-block";
-      block.dataset.ayah = ayahNum;
-      block.style.animationDelay = `${(i - offset) * 0.03}s`;
-      block.innerHTML = `
-        <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(ayahNum)}</span></div>
-        <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
-        <div class="ayah-translation ayah-translation-en">${esc(enAyahs[i]?.text || "")}</div>
-        <div class="ayah-translation ayah-translation-bn">${esc(trBn?.[i]?.text || "")}</div>
-        <div class="ayah-translation ayah-translation-ur">${esc(trUr?.[i]?.text || "")}</div>
-        <div class="ayah-footer"></div>`;
-      const bmBtn = document.createElement("button");
-      const alreadyBm = isBookmarked(surah.number, ayahNum);
-      bmBtn.className = "ayah-bookmark-btn" + (alreadyBm ? " bookmarked" : "");
-      bmBtn.title = "Bookmark this ayah";
-      bmBtn.innerHTML = alreadyBm ? "🔖 Bookmarked" : "🔖 Bookmark";
-      bmBtn.addEventListener("click", () => {
-        const added = toggleBookmark(surah.number, ayahNum, surah.englishName, surah.name);
-        if (added) {
-          bmBtn.classList.add("bookmarked");
-          bmBtn.innerHTML = "🔖 Bookmarked";
-        } else {
-          bmBtn.classList.remove("bookmarked");
-          bmBtn.innerHTML = "🔖 Bookmark";
-        }
-      });
-      block.querySelector(".ayah-footer").appendChild(bmBtn);
-      container.appendChild(block);
-    }
-    ayahOffset = end;
-    if (ayahOffset < surah.numberOfAyahs) {
-      btn.innerHTML = `Load more verses (${ayahOffset}/${surah.numberOfAyahs}) ▾`;
+    const { end, total } = await renderAyahBatch(surah, offset);
+    if (end < total) {
+      btn.innerHTML = `Load more verses (${end}/${total}) ▾`;
       btn.disabled = false;
       btn.classList.remove("hidden");
       document.getElementById("btnNextSurahBottom").style.display = "none";
     } else {
       btn.classList.add("hidden");
-      // Show next-surah button if not at the last surah
       const idx = surahsData.findIndex(s => s.number === surah.number);
       const nextSurah = surahsData[idx + 1];
       const nextBtn = document.getElementById("btnNextSurahBottom");
-      if (nextSurah) {
-        nextBtn.textContent = `Continue: ${nextSurah.englishName} \u2192`;
-        nextBtn.style.display = "";
-      }
+      if (nextSurah) { nextBtn.textContent = `Continue: ${nextSurah.englishName} \u2192`; nextBtn.style.display = ""; }
     }
   } catch {
     btn.innerHTML = "Failed to load. Tap to retry.";
     btn.disabled = false;
     btn.classList.remove("hidden");
   }
+}
+
+// Silent scroll-to-ayah — calls renderAyahBatch directly, never touches button.
+async function scrollToAyah(ayahNum) {
+  const surah = currentSurah;
+  while (ayahOffset < ayahNum && ayahOffset < surah.numberOfAyahs) {
+    const before = ayahOffset;
+    try { await renderAyahBatch(surah, ayahOffset); } catch { break; }
+    if (ayahOffset === before) break;
+  }
+  const block = document.querySelector(`#quranReaderAyahs [data-ayah="${ayahNum}"]`);
+  if (!block) return;
+  setTimeout(() => {
+    block.scrollIntoView({ behavior: "smooth", block: "center" });
+    block.classList.add("ayah-highlight");
+    setTimeout(() => block.classList.remove("ayah-highlight"), 2000);
+  }, 150);
 }
 
 document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAyahs);
