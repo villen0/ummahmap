@@ -855,8 +855,14 @@ document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAy
 document.getElementById("btnPrevSurah").addEventListener("click", () => navigateSurah(-1));
 document.getElementById("btnNextSurah").addEventListener("click", () => navigateSurah(1));
 document.getElementById("btnNextSurahBottom").addEventListener("click", () => navigateSurah(1));
-document.getElementById("btnCloseReader").addEventListener("click", () => {
+document.getElementById("btnCloseReader").addEventListener("click", async () => {
   document.getElementById("quranReader").classList.add("hidden");
+  // Re-expand surah list so user can pick another surah
+  const wrap = document.getElementById("surahListWrap");
+  const toggleBtn = document.getElementById("btnToggleSurahList");
+  if (!surahsLoaded) await loadSurahList();
+  wrap.classList.remove("hidden");
+  toggleBtn.textContent = "Hide surahs ▴";
   document.getElementById("quranSurahBrowser").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
