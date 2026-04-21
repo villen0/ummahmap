@@ -99,8 +99,11 @@ def nearby_mosques():
         },
         "rankPreference": "DISTANCE"
     }
-    r = requests.post(url, json=body, headers=headers, timeout=15)
-    data = r.json()
+    try:
+        r = requests.post(url, json=body, headers=headers, timeout=15)
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Could not reach Google API"}), 502
 
     results = data.get("places", [])
     if not results:
@@ -174,8 +177,11 @@ def halal_restaurants():
         },
         "rankPreference": "DISTANCE"
     }
-    r = requests.post(url, json=body, headers=headers, timeout=15)
-    data = r.json()
+    try:
+        r = requests.post(url, json=body, headers=headers, timeout=15)
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Could not reach Google API"}), 502
 
     results = data.get("places", [])
     if not results:
@@ -240,8 +246,11 @@ def halal_grocery():
         },
         "rankPreference": "DISTANCE"
     }
-    r = requests.post(url, json=body, headers=headers, timeout=15)
-    data = r.json()
+    try:
+        r = requests.post(url, json=body, headers=headers, timeout=15)
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Could not reach Google API"}), 502
 
     results = data.get("places", [])
     if not results:
@@ -305,7 +314,10 @@ def prayer_times():
     url = "https://api.aladhan.com/v1/timings"
     params = {"latitude": lat, "longitude": lng, "method": method, "school": school}
     r = requests.get(url, params=params, timeout=15)
-    data = r.json()
+    try:
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Prayer times API returned unexpected response"}), 502
 
     if data.get("code") != 200:
         return jsonify({"error": "Failed to fetch prayer times"}), 502
