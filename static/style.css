@@ -818,6 +818,13 @@ body {
   line-height: 1.5;
 }
 
+.app-version {
+  font-size: 11px;
+  color: var(--text3);
+  text-align: center;
+  padding: 10px 0 4px;
+}
+
 .setting-divider {
   border: none;
   border-top: 1px solid var(--border);
