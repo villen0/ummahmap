@@ -1,7 +1,10 @@
 import os
 import math
 import time
+import smtplib
 import requests
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from urllib.parse import quote_plus
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
@@ -48,6 +51,18 @@ def haversine_km(lat1, lng1, lat2, lng2):
 def home():
     return render_template("index.html", app_name="UmmahMap")
 
+@app.route("/.well-known/assetlinks.json")
+def assetlinks():
+    data = [{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "org.ummahmap.twa",
+            "sha256_cert_fingerprints": ["PLACEHOLDER_REPLACE_AFTER_BUBBLEWRAP"]
+        }
+    }]
+    return jsonify(data)
+
 @app.route("/api/nearby_mosques")
 def nearby_mosques():
     lat = request.args.get("lat", type=float)
@@ -79,13 +94,16 @@ def nearby_mosques():
         "locationRestriction": {
             "circle": {
                 "center": {"latitude": lat, "longitude": lng},
-                "radius": 10000
+                "radius": 50000
             }
         },
         "rankPreference": "DISTANCE"
     }
-    r = requests.post(url, json=body, headers=headers, timeout=15)
-    data = r.json()
+    try:
+        r = requests.post(url, json=body, headers=headers, timeout=15)
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Could not reach Google API"}), 502
 
     results = data.get("places", [])
     if not results:
@@ -154,13 +172,16 @@ def halal_restaurants():
         "locationBias": {
             "circle": {
                 "center": {"latitude": lat, "longitude": lng},
-                "radius": 5000
+                "radius": 50000
             }
         },
         "rankPreference": "DISTANCE"
     }
-    r = requests.post(url, json=body, headers=headers, timeout=15)
-    data = r.json()
+    try:
+        r = requests.post(url, json=body, headers=headers, timeout=15)
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Could not reach Google API"}), 502
 
     results = data.get("places", [])
     if not results:
@@ -220,13 +241,16 @@ def halal_grocery():
         "locationBias": {
             "circle": {
                 "center": {"latitude": lat, "longitude": lng},
-                "radius": 10000
+                "radius": 50000
             }
         },
         "rankPreference": "DISTANCE"
     }
-    r = requests.post(url, json=body, headers=headers, timeout=15)
-    data = r.json()
+    try:
+        r = requests.post(url, json=body, headers=headers, timeout=15)
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Could not reach Google API"}), 502
 
     results = data.get("places", [])
     if not results:
@@ -290,7 +314,10 @@ def prayer_times():
     url = "https://api.aladhan.com/v1/timings"
     params = {"latitude": lat, "longitude": lng, "method": method, "school": school}
     r = requests.get(url, params=params, timeout=15)
-    data = r.json()
+    try:
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Prayer times API returned unexpected response"}), 502
 
     if data.get("code") != 200:
         return jsonify({"error": "Failed to fetch prayer times"}), 502
@@ -425,6 +452,43 @@ def hadith_search(collection):
                 break
 
     return jsonify({"results": results, "total": len(results), "query": q})
+
+
+@app.route("/api/report_issue", methods=["POST"])
+def report_issue():
+    data = request.get_json(silent=True) or {}
+    issue_type = str(data.get("type", "General")).strip()[:100]
+    description = str(data.get("description", "")).strip()[:2000]
+    user_email = str(data.get("email", "")).strip()[:200]
+
+    if not description:
+        return jsonify({"error": "Description is required"}), 400
+
+    gmail_user = "ummahmap.org@gmail.com"
+    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "")
+
+    if not gmail_pass:
+        return jsonify({"error": "Email service not configured"}), 503
+
+    body = f"Issue Type: {issue_type}\n"
+    if user_email:
+        body += f"From: {user_email}\n"
+    body += f"\n{description}"
+
+    msg = MIMEMultipart()
+    msg["From"] = gmail_user
+    msg["To"] = gmail_user
+    msg["Subject"] = f"[UmmahMap Report] {issue_type}"
+    msg.attach(MIMEText(body, "plain"))
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(gmail_user, gmail_pass)
+            server.sendmail(gmail_user, gmail_user, msg.as_string())
+    except Exception as e:
+        return jsonify({"error": "Failed to send report"}), 500
+
+    return jsonify({"success": True})
 
 
 if __name__ == "__main__":

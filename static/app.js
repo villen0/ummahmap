@@ -144,6 +144,126 @@ document.getElementById("applySettings").addEventListener("click", () => {
 });
 
 
+// ===================== REPORT ISSUE =====================
+function openReport() {
+  closeSettings();
+  document.getElementById("reportPanel").classList.remove("hidden");
+  document.getElementById("reportOverlay").classList.remove("hidden");
+  document.getElementById("reportStatus").classList.add("hidden");
+  document.getElementById("reportDescription").value = "";
+  document.getElementById("reportEmail").value = "";
+  document.getElementById("reportType").selectedIndex = 0;
+}
+
+function closeReport() {
+  document.getElementById("reportPanel").classList.add("hidden");
+  document.getElementById("reportOverlay").classList.add("hidden");
+}
+
+document.getElementById("openReport").addEventListener("click", openReport);
+document.getElementById("closeReport").addEventListener("click", closeReport);
+document.getElementById("reportOverlay").addEventListener("click", closeReport);
+
+document.getElementById("btnSubmitReport").addEventListener("click", async () => {
+  const type = document.getElementById("reportType").value;
+  const description = document.getElementById("reportDescription").value.trim();
+  const email = document.getElementById("reportEmail").value.trim();
+  const status = document.getElementById("reportStatus");
+  const btn = document.getElementById("btnSubmitReport");
+
+  if (!description) {
+    status.textContent = "Please describe the issue before sending.";
+    status.classList.remove("hidden");
+    status.classList.add("error");
+    return;
+  }
+
+  btn.disabled = true;
+  status.innerHTML = '<span class="spinner"></span> Sending…';
+  status.classList.remove("hidden", "error");
+
+  try {
+    const res = await fetch("/api/report_issue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, description, email })
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.textContent = "Thank you! Your report has been sent.";
+      status.classList.remove("error");
+      document.getElementById("reportDescription").value = "";
+      document.getElementById("reportEmail").value = "";
+      setTimeout(closeReport, 2000);
+    } else {
+      throw new Error(data.error || "Unknown error");
+    }
+  } catch (e) {
+    status.textContent = "Failed to send. Please try again later.";
+    status.classList.add("error");
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+
+// ===================== QURAN BOOKMARKS =====================
+const BM_KEY = "um_quran_bookmarks";
+
+function getBookmarks() {
+  try { return JSON.parse(localStorage.getItem(BM_KEY)) || []; }
+  catch { return []; }
+}
+function saveBookmarks(bms) {
+  localStorage.setItem(BM_KEY, JSON.stringify(bms));
+}
+function isBookmarked(surahNum, ayahNum) {
+  return getBookmarks().some(b => b.surah === surahNum && b.ayah === ayahNum);
+}
+function toggleBookmark(surahNum, ayahNum, surahName, surahAr) {
+  let bms = getBookmarks();
+  const idx = bms.findIndex(b => b.surah === surahNum && b.ayah === ayahNum);
+  if (idx >= 0) {
+    bms.splice(idx, 1);
+  } else {
+    bms.unshift({ surah: surahNum, ayah: ayahNum, surahName, surahAr });
+    if (bms.length > 20) bms = bms.slice(0, 20);
+  }
+  saveBookmarks(bms);
+  renderBookmarkSection();
+  return idx < 0;
+}
+function renderBookmarkSection() {
+  const bms = getBookmarks();
+  const wrap = document.getElementById("quranBookmarks");
+  const list = document.getElementById("bookmarkList");
+  if (!bms.length) { wrap.classList.add("hidden"); return; }
+  wrap.classList.remove("hidden");
+  list.innerHTML = bms.map(b =>
+    `<button class="bookmark-card" data-surah="${b.surah}" data-ayah="${b.ayah}">
+      <span class="bookmark-ref">${esc(b.surahName)} &middot; Ayah ${b.ayah}</span>
+      <span class="bookmark-ar">${esc(b.surahAr)}</span>
+    </button>`
+  ).join("");
+  list.querySelectorAll(".bookmark-card").forEach(card => {
+    card.addEventListener("click", async () => {
+      try { await ensureSurahData(); } catch { return; }
+      const s = surahsData.find(x => x.number === +card.dataset.surah);
+      if (!s) return;
+      await openSurah(s);
+      await scrollToAyah(+card.dataset.ayah);
+    });
+  });
+}
+
+document.getElementById("btnClearBookmarks").addEventListener("click", () => {
+  saveBookmarks([]);
+  renderBookmarkSection();
+});
+
+renderBookmarkSection();
+
+
 // ===================== LOCATION =====================
 let cachedLoc = null;
 
@@ -345,8 +465,8 @@ document.getElementById("btnHideTasbih").addEventListener("click", () => {
 
 // ===================== MOSQUES =====================
 function distLabel(m) {
-  if (m.distance_m < 1000) return `${m.distance_m}m away`;
-  return `${m.distance_km} km away`;
+  const mi = m.distance_km * 0.621371;
+  return mi < 0.1 ? `${Math.round(mi * 5280)} ft away` : `${mi.toFixed(1)} mi away`;
 }
 
 function renderMosques(mosques) {
@@ -617,6 +737,9 @@ async function openSurah(surah) {
   ayahOffset   = 0;
   try { await ensureSurahData(); } catch {}
   document.getElementById("btnNextSurahBottom").style.display = "none";
+  // Collapse surah browser so only the reader is visible
+  document.getElementById("surahListWrap").classList.add("hidden");
+  document.getElementById("btnToggleSurahList").textContent = "Show all surahs ▾";
   // Show reader
   const reader = document.getElementById("quranReader");
   reader.classList.remove("hidden");
@@ -627,67 +750,82 @@ async function openSurah(surah) {
   document.getElementById("quranReaderAyahs").innerHTML = "";
   document.getElementById("btnLoadMoreAyahs").classList.add("hidden");
   updateSurahNavButtons();
-  // Scroll to reader
   reader.scrollIntoView({ behavior: "smooth", block: "start" });
   await loadMoreAyahs();
 }
 
+
+// Core fetch+render — no button state touched. Returns { end, total }.
+async function renderAyahBatch(surah, offset) {
+  let trEn = translitCache.en[surah.number];
+  let trBn = translationCache.bn[surah.number];
+  let trUr = translationCache.ur[surah.number];
+  const [arRes, enRes, trEnRes, trBnRes, trUrRes] = await Promise.all([
+    fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
+    fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
+    trEn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`),
+    trBn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/bn.bengali`),
+    trUr ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ur.ahmedali`)
+  ]);
+  const arData = await arRes.json();
+  const enData = await enRes.json();
+  if (trEnRes) { const d = await trEnRes.json(); trEn = d.data?.ayahs || []; translitCache.en[surah.number] = trEn; }
+  if (trBnRes) { const d = await trBnRes.json(); trBn = d.data?.ayahs || []; translationCache.bn[surah.number] = trBn; }
+  if (trUrRes) { const d = await trUrRes.json(); trUr = d.data?.ayahs || []; translationCache.ur[surah.number] = trUr; }
+  const arAyahs = arData.data.ayahs;
+  const enAyahs = enData.data?.ayahs || [];
+  const container = document.getElementById("quranReaderAyahs");
+  const end = Math.min(offset + AYAHS_PER_LOAD, arAyahs.length);
+  for (let i = offset; i < end; i++) {
+    const ayahNum = arAyahs[i].numberInSurah;
+    const block = document.createElement("div");
+    block.className = "ayah-block";
+    block.dataset.ayah = ayahNum;
+    block.style.animationDelay = `${(i - offset) * 0.03}s`;
+    block.innerHTML = `
+      <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(ayahNum)}</span></div>
+      <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
+      <div class="ayah-translation ayah-translation-en">${esc(enAyahs[i]?.text || "")}</div>
+      <div class="ayah-translation ayah-translation-bn">${esc(trBn?.[i]?.text || "")}</div>
+      <div class="ayah-translation ayah-translation-ur">${esc(trUr?.[i]?.text || "")}</div>
+      <div class="ayah-footer"></div>`;
+    const bmBtn = document.createElement("button");
+    const alreadyBm = isBookmarked(surah.number, ayahNum);
+    bmBtn.className = "ayah-bookmark-btn" + (alreadyBm ? " bookmarked" : "");
+    bmBtn.title = "Bookmark this ayah";
+    bmBtn.innerHTML = alreadyBm ? "🔖 Bookmarked" : "🔖 Bookmark";
+    bmBtn.addEventListener("click", () => {
+      const added = toggleBookmark(surah.number, ayahNum, surah.englishName, surah.name);
+      if (added) { bmBtn.classList.add("bookmarked"); bmBtn.innerHTML = "🔖 Bookmarked"; }
+      else        { bmBtn.classList.remove("bookmarked"); bmBtn.innerHTML = "🔖 Bookmark"; }
+    });
+    block.querySelector(".ayah-footer").appendChild(bmBtn);
+    container.appendChild(block);
+  }
+  ayahOffset = end;
+  return { end, total: surah.numberOfAyahs };
+}
+
+// User-facing load — manages button state, calls renderAyahBatch.
 async function loadMoreAyahs() {
   const surah = currentSurah;
   const offset = ayahOffset;
   const btn = document.getElementById("btnLoadMoreAyahs");
   btn.innerHTML = '<span class="spinner"></span> Loading…';
   btn.disabled = true;
-
   try {
-    // Fetch Arabic + all translations in parallel; cache phonetic and BN/UR translations
-    let trEn = translitCache.en[surah.number];
-    let trBn = translationCache.bn[surah.number];
-    let trUr = translationCache.ur[surah.number];
-    const [arRes, enRes, trEnRes, trBnRes, trUrRes] = await Promise.all([
-      fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
-      fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
-      trEn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`),
-      trBn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/bn.bengali`),
-      trUr ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ur.ahmedali`)
-    ]);
-    const arData = await arRes.json();
-    const enData = await enRes.json();
-    if (trEnRes) { const d = await trEnRes.json(); trEn = d.data?.ayahs || []; translitCache.en[surah.number] = trEn; }
-    if (trBnRes) { const d = await trBnRes.json(); trBn = d.data?.ayahs || []; translationCache.bn[surah.number] = trBn; }
-    if (trUrRes) { const d = await trUrRes.json(); trUr = d.data?.ayahs || []; translationCache.ur[surah.number] = trUr; }
-    const arAyahs = arData.data.ayahs;
-    const enAyahs = enData.data?.ayahs || [];
-    const container = document.getElementById("quranReaderAyahs");
-    const end = Math.min(offset + AYAHS_PER_LOAD, arAyahs.length);
-    for (let i = offset; i < end; i++) {
-      const block = document.createElement("div");
-      block.className = "ayah-block";
-      block.style.animationDelay = `${(i - offset) * 0.03}s`;
-      block.innerHTML = `
-        <div class="ayah-arabic">${esc(arAyahs[i].text)} <span class="ayah-num">${esc(arAyahs[i].numberInSurah)}</span></div>
-        <div class="ayah-translit ayah-translit-en">${esc(trEn?.[i]?.text || "")}</div>
-        <div class="ayah-translation ayah-translation-en">${esc(enAyahs[i]?.text || "")}</div>
-        <div class="ayah-translation ayah-translation-bn">${esc(trBn?.[i]?.text || "")}</div>
-        <div class="ayah-translation ayah-translation-ur">${esc(trUr?.[i]?.text || "")}</div>`;
-      container.appendChild(block);
-    }
-    ayahOffset = end;
-    if (ayahOffset < surah.numberOfAyahs) {
-      btn.innerHTML = `Load more verses (${ayahOffset}/${surah.numberOfAyahs}) ▾`;
+    const { end, total } = await renderAyahBatch(surah, offset);
+    if (end < total) {
+      btn.innerHTML = `Load more verses (${end}/${total}) ▾`;
       btn.disabled = false;
       btn.classList.remove("hidden");
       document.getElementById("btnNextSurahBottom").style.display = "none";
     } else {
       btn.classList.add("hidden");
-      // Show next-surah button if not at the last surah
       const idx = surahsData.findIndex(s => s.number === surah.number);
       const nextSurah = surahsData[idx + 1];
       const nextBtn = document.getElementById("btnNextSurahBottom");
-      if (nextSurah) {
-        nextBtn.textContent = `Continue: ${nextSurah.englishName} \u2192`;
-        nextBtn.style.display = "";
-      }
+      if (nextSurah) { nextBtn.textContent = `Continue: ${nextSurah.englishName} \u2192`; nextBtn.style.display = ""; }
     }
   } catch {
     btn.innerHTML = "Failed to load. Tap to retry.";
@@ -696,12 +834,36 @@ async function loadMoreAyahs() {
   }
 }
 
+// Silent scroll-to-ayah — calls renderAyahBatch directly, never touches button.
+async function scrollToAyah(ayahNum) {
+  const surah = currentSurah;
+  while (ayahOffset < ayahNum && ayahOffset < surah.numberOfAyahs) {
+    const before = ayahOffset;
+    try { await renderAyahBatch(surah, ayahOffset); } catch { break; }
+    if (ayahOffset === before) break;
+  }
+  const block = document.querySelector(`#quranReaderAyahs [data-ayah="${ayahNum}"]`);
+  if (!block) return;
+  setTimeout(() => {
+    block.scrollIntoView({ behavior: "smooth", block: "center" });
+    block.classList.add("ayah-highlight");
+    setTimeout(() => block.classList.remove("ayah-highlight"), 2000);
+  }, 150);
+}
+
 document.getElementById("btnLoadMoreAyahs").addEventListener("click", loadMoreAyahs);
 document.getElementById("btnPrevSurah").addEventListener("click", () => navigateSurah(-1));
 document.getElementById("btnNextSurah").addEventListener("click", () => navigateSurah(1));
 document.getElementById("btnNextSurahBottom").addEventListener("click", () => navigateSurah(1));
-document.getElementById("btnCloseReader").addEventListener("click", () => {
+document.getElementById("btnCloseReader").addEventListener("click", async () => {
   document.getElementById("quranReader").classList.add("hidden");
+  // Re-expand surah list so user can pick another surah
+  const wrap = document.getElementById("surahListWrap");
+  const toggleBtn = document.getElementById("btnToggleSurahList");
+  if (!surahsLoaded) await loadSurahList();
+  wrap.classList.remove("hidden");
+  toggleBtn.textContent = "Hide surahs ▴";
+  document.getElementById("quranSurahBrowser").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 // Phonetic selector (English only)
@@ -873,7 +1035,7 @@ function renderHalal(restaurants) {
                     : r.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
     const ratingTag = r.rating ? `<span class="tag tag-rating">★ ${r.rating}</span>` : "";
     const priceTag  = r.price_level ? `<span class="tag tag-dist">${PRICE[r.price_level]}</span>` : "";
-    const dist      = r.distance_m < 1000 ? `${r.distance_m}m away` : `${r.distance_km} km away`;
+    const dist      = (() => { const mi = r.distance_km * 0.621371; return mi < 0.1 ? `${Math.round(mi * 5280)} ft away` : `${mi.toFixed(1)} mi away`; })();
     const card = document.createElement("div");
     card.className = "mosque-card";
     card.style.animationDelay = `${i * 0.05}s`;
@@ -936,7 +1098,7 @@ function renderGrocery(stores) {
     const openTag   = r.open_now === true  ? `<span class="tag tag-open">Open now</span>`
                     : r.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
     const ratingTag = r.rating ? `<span class="tag tag-rating">★ ${r.rating}</span>` : "";
-    const dist      = r.distance_m < 1000 ? `${r.distance_m}m away` : `${r.distance_km} km away`;
+    const dist      = (() => { const mi = r.distance_km * 0.621371; return mi < 0.1 ? `${Math.round(mi * 5280)} ft away` : `${mi.toFixed(1)} mi away`; })();
     const card = document.createElement("div");
     card.className = "mosque-card";
     card.style.animationDelay = `${i * 0.05}s`;
@@ -1027,3 +1189,60 @@ document.querySelectorAll(".tasbih-goal-btn").forEach(btn => {
 });
 
 tasbihUpdateRing(); // initialise ring on load
+
+
+// ===================== PWA INSTALL BANNER =====================
+(function initInstallBanner() {
+  const DISMISSED_KEY = "um_install_dismissed";
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+    || window.navigator.standalone;
+
+  // Already installed — never show banner
+  if (isStandalone) { localStorage.setItem(DISMISSED_KEY, "1"); return; }
+  if (localStorage.getItem(DISMISSED_KEY)) return;
+
+  const banner     = document.getElementById("installBanner");
+  const btnInstall = document.getElementById("btnInstall");
+  const btnDismiss = document.getElementById("btnInstallDismiss");
+  const iosGuide   = document.getElementById("iosInstallGuide");
+  const btnIosClose = document.getElementById("btnIosGuideClose");
+
+  let deferredPrompt = null;
+
+  function dismissBanner() {
+    banner.classList.add("hidden");
+    iosGuide.classList.add("hidden");
+    localStorage.setItem(DISMISSED_KEY, "1");
+  }
+
+  btnDismiss.addEventListener("click", dismissBanner);
+  btnIosClose.addEventListener("click", () => iosGuide.classList.add("hidden"));
+
+  // Chrome / Edge / Android — native install prompt
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    setTimeout(() => banner.classList.remove("hidden"), 3000);
+  });
+
+  btnInstall.addEventListener("click", async () => {
+    if (deferredPrompt) {
+      // Android/Chrome: trigger native prompt
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      dismissBanner();
+    } else if (isIos) {
+      // iOS: show step-by-step guide
+      banner.classList.add("hidden");
+      iosGuide.classList.remove("hidden");
+    }
+  });
+
+  // iOS: show banner after 3 s
+  if (isIos) {
+    setTimeout(() => banner.classList.remove("hidden"), 3000);
+  }
+})();

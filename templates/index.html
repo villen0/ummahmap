@@ -20,6 +20,39 @@
 </head>
 <body>
 
+  <!-- Report Issue Panel -->
+  <div id="reportOverlay" class="overlay hidden"></div>
+  <aside id="reportPanel" class="settings-panel hidden">
+    <div class="settings-header">
+      <h3>Report an Issue</h3>
+      <button class="icon-btn" id="closeReport">✕</button>
+    </div>
+    <div class="settings-body">
+      <div class="setting-group">
+        <label>Issue Type</label>
+        <select id="reportType">
+          <option value="Bug">Bug / Something broken</option>
+          <option value="Prayer Times">Prayer times incorrect</option>
+          <option value="Qibla">Qibla direction wrong</option>
+          <option value="Mosque">Mosque info incorrect</option>
+          <option value="Quran / Hadith">Quran / Hadith content</option>
+          <option value="Feature Request">Feature request</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Description</label>
+        <textarea id="reportDescription" class="report-textarea" rows="5" placeholder="Please describe the issue…" maxlength="2000"></textarea>
+      </div>
+      <div class="setting-group">
+        <label>Your Email (optional)</label>
+        <input type="email" id="reportEmail" class="report-input" placeholder="so we can follow up" maxlength="200" />
+      </div>
+      <div id="reportStatus" class="status-msg hidden"></div>
+      <button class="btn-primary full-width" id="btnSubmitReport">Send Report</button>
+    </div>
+  </aside>
+
   <!-- Settings Panel -->
   <div id="settingsOverlay" class="overlay hidden"></div>
   <aside id="settingsPanel" class="settings-panel hidden">
@@ -79,6 +112,12 @@
         </select>
       </div>
       <button class="btn-primary full-width" id="applySettings">Apply &amp; Refresh</button>
+      <div class="setting-divider"></div>
+      <div class="setting-group">
+        <label>Feedback</label>
+        <p class="setting-hint">Found a bug or something wrong? Let us know and we'll fix it.</p>
+        <button class="btn-ghost full-width" id="openReport">Report an Issue</button>
+      </div>
     </div>
   </aside>
 
@@ -255,6 +294,14 @@
         </div>
         <!-- Surah browser -->
         <div id="quranSurahBrowser" class="surah-browser">
+          <!-- Bookmarks -->
+          <div id="quranBookmarks" class="quran-bookmarks hidden">
+            <div class="bookmarks-header">
+              <span>🔖 Bookmarks</span>
+              <button class="btn-ghost btn-xs" id="btnClearBookmarks">Clear all</button>
+            </div>
+            <div id="bookmarkList"></div>
+          </div>
           <div class="surah-browser-header">
             <span style="font-size:13px;color:var(--text3)">Browse &amp; tap a surah to read</span>
             <button class="btn-ghost btn-xs" id="btnToggleSurahList">Show all surahs ▾</button>
@@ -264,14 +311,14 @@
         <!-- Full surah reader -->
         <div id="quranReader" class="quran-reader-wrap hidden">
           <div class="quran-reader-nav">
-            <button class="btn-ghost btn-xs" id="btnPrevSurah">&#8592; Prev</button>
-            <button class="btn-ghost btn-xs" id="btnCloseReader" title="Close reader">✕ Close</button>
-            <button class="btn-ghost btn-xs" id="btnNextSurah">Next &#8594;</button>
+            <button class="btn-ghost btn-xs" id="btnPrevSurah" title="Previous surah">&#8592; Prev</button>
+            <button class="btn-ghost btn-xs" id="btnCloseReader">&#8598; All Surahs</button>
+            <button class="btn-ghost btn-xs" id="btnNextSurah" title="Next surah">Next &#8594;</button>
           </div>
           <div class="quran-reader-header" id="quranReaderHeader"></div>
           <div id="quranReaderAyahs"></div>
           <button class="btn-ghost full-width" id="btnLoadMoreAyahs" style="margin-top:10px">Load more verses ▾</button>
-          <button class="btn-primary full-width" id="btnNextSurahBottom" style="margin-top:10px;display:none">Continue: Next Surah &#8594;</button>
+          <button class="btn-primary full-width" id="btnNextSurahBottom" style="margin-top:10px;display:none">Next Surah &#8594;</button>
         </div>
       </section>
 
@@ -393,6 +440,28 @@
     </button>
   </nav>
 
+  <!-- PWA Install Banner -->
+  <div id="installBanner" class="install-banner hidden">
+    <img src="/static/icon.svg" class="install-banner-icon" alt="UmmahMap" />
+    <div class="install-banner-text">
+      <strong>Install UmmahMap</strong>
+      <span>Prayer times, Qibla &amp; more — works offline</span>
+    </div>
+    <button class="install-banner-btn" id="btnInstall">Install</button>
+    <button class="install-banner-close" id="btnInstallDismiss">✕</button>
+  </div>
+
+  <!-- iOS Install Instructions -->
+  <div id="iosInstallGuide" class="ios-install-guide hidden">
+    <div class="ios-guide-arrow"></div>
+    <button class="install-banner-close ios-guide-close" id="btnIosGuideClose">✕</button>
+    <p class="ios-guide-title">Add to Home Screen</p>
+    <ol class="ios-guide-steps">
+      <li>Tap the <strong>Share</strong> button <span class="ios-share-icon">&#10548;</span> in Safari's toolbar</li>
+      <li>Scroll down and tap <strong>"Add to Home Screen"</strong></li>
+      <li>Tap <strong>"Add"</strong> in the top right</li>
+    </ol>
+  </div>
 
   <script src="/static/app.js" defer></script>
 </body>

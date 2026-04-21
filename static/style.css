@@ -812,6 +812,35 @@ body {
 }
 .setting-group select:focus { border-color: rgba(200,149,58,0.6); }
 
+.setting-hint {
+  font-size: 12px;
+  color: var(--text3);
+  line-height: 1.5;
+}
+
+.setting-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 4px 0;
+}
+
+.report-textarea,
+.report-input {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  padding: 10px 12px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+  resize: vertical;
+}
+.report-textarea:focus,
+.report-input:focus { border-color: rgba(200,149,58,0.6); }
+.report-textarea { min-height: 100px; }
 
 
 /* ===== LOADING SPINNER ===== */
@@ -1045,6 +1074,80 @@ body {
   margin-bottom: 3px;
 }
 .quran-reader-wrap.show-translit-en .ayah-translit-en { display: block; }
+
+/* ===== QURAN BOOKMARKS ===== */
+.quran-bookmarks {
+  margin-bottom: 14px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.bookmarks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg3);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+}
+.bookmark-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-body);
+  transition: background 0.15s;
+}
+.bookmark-card:hover { background: var(--bg3); }
+.bookmark-ref { font-size: 13px; font-weight: 600; color: var(--text); }
+.bookmark-ar  { font-family: var(--font-arabic); font-size: 16px; color: var(--gold2); }
+
+.ayah-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.ayah-bookmark-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  color: var(--text3);
+  padding: 3px 10px;
+  font-family: var(--font-body);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ayah-bookmark-btn:hover {
+  background: var(--gold-dim);
+  border-color: rgba(200,149,58,0.35);
+  color: var(--gold);
+}
+.ayah-bookmark-btn.bookmarked {
+  background: var(--gold-dim);
+  border-color: rgba(200,149,58,0.4);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+@keyframes ayahPulse {
+  0%   { background: rgba(160,108,30,0.18); }
+  60%  { background: rgba(160,108,30,0.08); }
+  100% { background: transparent; }
+}
+.ayah-highlight {
+  border-radius: 8px;
+  animation: ayahPulse 2s ease forwards;
+}
+
 
 /* ===== HADITH ===== */
 .setting-select-inline {
@@ -1596,4 +1699,166 @@ body {
   .footer {
     padding-bottom: 80px;
   }
+}
+
+/* ===== PWA INSTALL BANNER ===== */
+.install-banner {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 32px));
+  background: #1a1209;
+  color: #f5f1e9;
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.38);
+  z-index: 500;
+  animation: slideUpBanner 0.35s cubic-bezier(0.2,0,0.2,1);
+}
+.install-banner.hidden { display: none; }
+
+@keyframes slideUpBanner {
+  from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+}
+
+.install-banner-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  flex-shrink: 0;
+  background: var(--gold-dim);
+}
+
+.install-banner-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.install-banner-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+.install-banner-text span {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.install-banner-btn {
+  background: var(--gold2);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.install-banner-btn:hover { background: var(--gold3); }
+
+.install-banner-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.5);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.install-banner-close:hover { color: rgba(255,255,255,0.9); }
+
+/* ===== iOS INSTALL GUIDE ===== */
+.ios-install-guide {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(340px, calc(100vw - 32px));
+  background: #1a1209;
+  color: #f5f1e9;
+  border-radius: 18px;
+  padding: 20px 20px 18px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.45);
+  z-index: 501;
+  animation: slideUpBanner 0.3s cubic-bezier(0.2,0,0.2,1);
+}
+.ios-install-guide.hidden { display: none; }
+
+.ios-guide-arrow {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid #1a1209;
+}
+
+.ios-guide-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.ios-guide-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 14px;
+  padding-right: 24px;
+}
+
+.ios-guide-steps {
+  list-style: none;
+  counter-reset: steps;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0;
+}
+.ios-guide-steps li {
+  counter-increment: steps;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.82);
+  line-height: 1.4;
+}
+.ios-guide-steps li::before {
+  content: counter(steps);
+  min-width: 22px;
+  height: 22px;
+  background: var(--gold2);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.ios-guide-steps strong { color: #fff; }
+
+.ios-share-icon {
+  display: inline-block;
+  font-size: 15px;
+  vertical-align: middle;
+  color: var(--gold3);
 }
