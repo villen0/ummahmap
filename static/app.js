@@ -536,13 +536,21 @@ document.getElementById("btnHideMosques").addEventListener("click", () => {
 
 
 // ===================== QIBLA =====================
-let qiblaBearing = null;
-let lastHeading   = null;
-let watchId       = null;
-let startedQibla  = false;
-let usingAbsolute = false;  // true once we receive a deviceorientationabsolute event
+let qiblaBearing    = null;
+let lastHeading     = null;
+let smoothedHeading = null;
+let rafPending      = false;
+let watchId         = null;
+let startedQibla    = false;
+let usingAbsolute   = false;  // true once we receive a deviceorientationabsolute event
 
 function normalizeDeg(d) { return ((d % 360) + 360) % 360; }
+
+// Interpolate between two angles via shortest path (handles 0/360 wraparound)
+function lerpAngle(from, to, alpha) {
+  const diff = ((to - from + 540) % 360) - 180;
+  return (from + diff * alpha + 360) % 360;
+}
 
 function rotateArrow(deg) {
   const el = document.getElementById("qiblaArrow");
@@ -601,9 +609,23 @@ function handleOrientation(e) {
 
   if (e.absolute) usingAbsolute = true;
 
-  lastHeading = normalizeDeg(heading);
-  rotateLabels(-lastHeading);
-  if (typeof qiblaBearing === "number") rotateArrow(normalizeDeg(qiblaBearing - lastHeading));
+  // Low-pass filter — 0.15 = 85% history, 15% new reading; eliminates iOS jitter
+  if (smoothedHeading === null) {
+    smoothedHeading = normalizeDeg(heading);
+  } else {
+    smoothedHeading = lerpAngle(smoothedHeading, normalizeDeg(heading), 0.15);
+  }
+  lastHeading = smoothedHeading;
+
+  // Throttle DOM writes to animation frames (avoids 50Hz+ thrashing on iOS)
+  if (!rafPending) {
+    rafPending = true;
+    requestAnimationFrame(() => {
+      rafPending = false;
+      rotateLabels(-lastHeading);
+      if (typeof qiblaBearing === "number") rotateArrow(normalizeDeg(qiblaBearing - lastHeading));
+    });
+  }
 }
 
 function startCompass() {
@@ -613,8 +635,9 @@ function startCompass() {
 }
 
 function _doStartCompass() {
-  startedQibla = true;
-  usingAbsolute = false;
+  startedQibla    = true;
+  usingAbsolute   = false;
+  smoothedHeading = null;
   startCompass();
   startLocationWatch();
 }
