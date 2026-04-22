@@ -59,29 +59,72 @@ function safeUrl(url) {
 
 // ===================== QUOTES =====================
 const QUOTES = [
-  "Indeed, with hardship comes ease. (Qur'an 94:6)",
-  "So remember Me; I will remember you. (Qur'an 2:152)",
-  "Allah does not burden a soul beyond that it can bear. (Qur'an 2:286)",
-  "The best among you are those who have the best manners. (Hadith)",
-  "Whoever relies upon Allah — then He is sufficient for him. (Qur'an 65:3)",
-  "Speak good or remain silent. (Hadith — Bukhari & Muslim)",
-  "The strong person is not the one who can wrestle others; it is the one who controls himself when angry. (Hadith)",
-  "Allah is beautiful and loves beauty. (Hadith — Muslim)",
-  "Make things easy, do not make them difficult. (Hadith)",
-  "Verily, with every difficulty there is relief. (Qur'an 94:5)"
+  { text: "Indeed, with hardship comes ease.", src: "Qur'an 94:6" },
+  { text: "So remember Me; I will remember you.", src: "Qur'an 2:152" },
+  { text: "Allah does not burden a soul beyond that it can bear.", src: "Qur'an 2:286" },
+  { text: "Whoever relies upon Allah — He is sufficient for him.", src: "Qur'an 65:3" },
+  { text: "Verily, with every difficulty there is relief.", src: "Qur'an 94:5" },
+  { text: "And He found you lost and guided you.", src: "Qur'an 93:7" },
+  { text: "Your Lord has not forsaken you, nor has He become displeased.", src: "Qur'an 93:3" },
+  { text: "When My servants ask you about Me — I am near.", src: "Qur'an 2:186" },
+  { text: "Indeed, Allah is with the patient.", src: "Qur'an 2:153" },
+  { text: "Do not grieve; indeed Allah is with us.", src: "Qur'an 9:40" },
+  { text: "Seek help through patience and prayer.", src: "Qur'an 2:45" },
+  { text: "And He is with you wherever you are.", src: "Qur'an 57:4" },
+  { text: "With the remembrance of Allah do hearts find rest.", src: "Qur'an 13:28" },
+  { text: "So be patient with gracious patience.", src: "Qur'an 70:5" },
+  { text: "Trust in Allah; He loves those who rely upon Him.", src: "Qur'an 3:159" },
+  { text: "Perhaps Allah will bring after that a different matter.", src: "Qur'an 65:1" },
+  { text: "My mercy encompasses all things.", src: "Qur'an 7:156" },
+  { text: "Allah intends for you ease and does not intend for you hardship.", src: "Qur'an 2:185" },
+  { text: "And He is the Forgiving, the Loving.", src: "Qur'an 85:14" },
+  { text: "Whoever is grateful — I will surely increase him in favour.", src: "Qur'an 14:7" },
+  { text: "He knows what is in every heart.", src: "Qur'an 67:13" },
+  { text: "And your Lord is the Forgiving, the Full of Mercy.", src: "Qur'an 18:58" },
+  { text: "Call upon Me; I will respond to you.", src: "Qur'an 40:60" },
+  { text: "Allah is the ally of those who believe.", src: "Qur'an 2:257" },
+  { text: "Do good; indeed Allah loves the doers of good.", src: "Qur'an 2:195" },
+  { text: "The best among you are those who have the best manners.", src: "Hadith · Bukhari" },
+  { text: "Speak good or remain silent.", src: "Hadith · Bukhari & Muslim" },
+  { text: "The strong person controls himself when angry.", src: "Hadith · Bukhari & Muslim" },
+  { text: "Allah is beautiful and loves beauty.", src: "Hadith · Muslim" },
+  { text: "Make things easy, do not make them difficult.", src: "Hadith · Bukhari" },
+  { text: "None of you truly believes until he loves for his brother what he loves for himself.", src: "Hadith · Bukhari & Muslim" },
+  { text: "Smiling at your brother is an act of charity.", src: "Hadith · Tirmidhi" },
+  { text: "Show mercy to those on earth; the One in heaven will show mercy to you.", src: "Hadith · Abu Dawud" },
+  { text: "Do not underestimate any good deed, even greeting your brother with a cheerful face.", src: "Hadith · Muslim" },
+  { text: "The most beloved deeds to Allah are the most consistent, even if small.", src: "Hadith · Bukhari & Muslim" },
+  { text: "Be in this world as if you were a stranger or a traveller.", src: "Hadith · Bukhari" },
+  { text: "A Muslim is one from whose tongue and hand other Muslims are safe.", src: "Hadith · Bukhari" },
+  { text: "Cleanliness is part of faith.", src: "Hadith · Muslim" },
+  { text: "The deen is sincerity.", src: "Hadith · Muslim" },
+  { text: "Take advantage of five before five: youth, health, wealth, free time, and life.", src: "Hadith · Bayhaqi" },
 ];
 
+let quoteQueue = [];
+function nextQuote() {
+  if (!quoteQueue.length) {
+    quoteQueue = [...Array(QUOTES.length).keys()].sort(() => Math.random() - 0.5);
+  }
+  return QUOTES[quoteQueue.pop()];
+}
+
 function setQuote() {
-  const el = document.getElementById("quote");
-  if (!el) return;
-  el.style.opacity = "0";
+  const textEl = document.getElementById("quote");
+  const srcEl  = document.getElementById("quoteSrc");
+  if (!textEl) return;
+  textEl.style.opacity = "0";
+  if (srcEl) srcEl.style.opacity = "0";
   setTimeout(() => {
-    el.textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
-    el.style.opacity = "0.9";
-  }, 300);
+    const q = nextQuote();
+    textEl.textContent = q.text;
+    if (srcEl) srcEl.textContent = q.src;
+    textEl.style.opacity = "1";
+    if (srcEl) srcEl.style.opacity = "1";
+  }, 400);
 }
 setQuote();
-setInterval(setQuote, 5 * 60 * 1000);
+setInterval(setQuote, 45 * 1000);
 
 
 // ===================== SETTINGS =====================
