@@ -22,6 +22,9 @@ function safeUrl(url) {
   function switchTab(name) {
     if (!VALID_TABS.includes(name)) name = 'prayer';
 
+    if (name === 'quran'  && !surahsLoaded)           loadSurahList();
+    if (name === 'hadith' && !hadithBrowserCollection) loadHadithBrowser(true);
+
     // Panels
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     const panel = document.getElementById('tab-' + name);
@@ -700,8 +703,6 @@ async function startEverything() {
   setHijriDate();
   loadPrayerTimes();
   loadMosques();
-  loadSurahList();
-  loadHadithBrowser(true);
 }
 
 // Auto-load on page ready
@@ -950,7 +951,6 @@ async function loadHadithBrowser(reset = false) {
         </div>`;
       btn.addEventListener("click", () => {
         fetchHadith(col, h.number);
-        toggleHadithBrowser(false);
       });
       list.appendChild(btn);
     });
