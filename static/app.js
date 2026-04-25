@@ -135,32 +135,36 @@ function getSettings() {
   return {
     method:       parseInt(localStorage.getItem("um_method")         || "2", 10),
     school:       parseInt(localStorage.getItem("um_school")         || "0", 10),
-    limit:        parseInt(localStorage.getItem("um_limit")          || "5", 10),
-    halalLimit:   parseInt(localStorage.getItem("um_halal_limit")    || "5", 10),
-    groceryLimit: parseInt(localStorage.getItem("um_grocery_limit")  || "5", 10)
+    limit:        parseInt(localStorage.getItem("um_limit")          || "3", 10),
+    halalLimit:   parseInt(localStorage.getItem("um_halal_limit")    || "3", 10),
+    groceryLimit:   parseInt(localStorage.getItem("um_grocery_limit")    || "3", 10),
+    clothingLimit:  parseInt(localStorage.getItem("um_clothing_limit")   || "3", 10)
   };
 }
 
 function saveSettings() {
-  const m  = document.getElementById("settingMethod").value;
-  const s  = document.getElementById("settingSchool").value;
-  const l  = document.getElementById("settingLimit").value;
-  const hl = document.getElementById("settingHalalLimit").value;
-  const gl = document.getElementById("settingGroceryLimit").value;
+  const m   = document.getElementById("settingMethod").value;
+  const s   = document.getElementById("settingSchool").value;
+  const l   = document.getElementById("settingLimit").value;
+  const hl  = document.getElementById("settingHalalLimit").value;
+  const gl  = document.getElementById("settingGroceryLimit").value;
+  const cl  = document.getElementById("settingClothingLimit").value;
   localStorage.setItem("um_method", m);
   localStorage.setItem("um_school", s);
   localStorage.setItem("um_limit", l);
   localStorage.setItem("um_halal_limit", hl);
   localStorage.setItem("um_grocery_limit", gl);
+  localStorage.setItem("um_clothing_limit", cl);
 }
 
 function applySettingsToUI() {
   const s = getSettings();
-  document.getElementById("settingMethod").value        = s.method;
-  document.getElementById("settingSchool").value        = s.school;
-  document.getElementById("settingLimit").value         = s.limit;
-  document.getElementById("settingHalalLimit").value    = s.halalLimit;
-  document.getElementById("settingGroceryLimit").value  = s.groceryLimit;
+  document.getElementById("settingMethod").value         = s.method;
+  document.getElementById("settingSchool").value         = s.school;
+  document.getElementById("settingLimit").value          = s.limit;
+  document.getElementById("settingHalalLimit").value     = s.halalLimit;
+  document.getElementById("settingGroceryLimit").value   = s.groceryLimit;
+  document.getElementById("settingClothingLimit").value  = s.clothingLimit;
 }
 
 function openSettings() {
@@ -1096,6 +1100,62 @@ async function loadHalalRestaurants() {
 
 // ===================== HALAL GROCERY =====================
 document.getElementById("btnFindGrocery").addEventListener("click", loadHalalGrocery);
+
+function renderClothing(stores) {
+  const list = document.getElementById("clothingList");
+  list.innerHTML = "";
+  stores.forEach((r, i) => {
+    const openTag   = r.open_now === true  ? `<span class="tag tag-open">Open now</span>`
+                    : r.open_now === false ? `<span class="tag tag-closed">Closed</span>` : "";
+    const ratingTag = r.rating ? `<span class="tag tag-rating">★ ${r.rating}</span>` : "";
+    const dist      = (() => { const mi = r.distance_km * 0.621371; return mi < 0.1 ? `${Math.round(mi * 5280)} ft away` : `${mi.toFixed(1)} mi away`; })();
+    const card = document.createElement("div");
+    card.className = "mosque-card";
+    card.style.animationDelay = `${i * 0.05}s`;
+    card.innerHTML = `
+      <div class="mosque-card-top">
+        <div class="mosque-rank">${i + 1}</div>
+        <div class="mosque-info">
+          <div class="mosque-name">${esc(r.name)}</div>
+          <div class="mosque-addr">${esc(r.address || "—")}</div>
+          <div class="mosque-tags">
+            <span class="tag tag-dist">📍 ${esc(dist)}</span>
+            ${openTag}${ratingTag}
+          </div>
+        </div>
+      </div>
+      <div class="mosque-actions">
+        <a href="${safeUrl(r.maps_directions_url)}" target="_blank" rel="noopener" class="link-btn primary">🗺 Directions</a>
+        ${r.website
+          ? `<a href="${safeUrl(r.website)}" target="_blank" rel="noopener" class="link-btn">🌐 Website</a>`
+          : `<a href="${safeUrl(r.maps_place_url)}" target="_blank" rel="noopener" class="link-btn">Details</a>`}
+      </div>`;
+    list.appendChild(card);
+  });
+  list.classList.remove("hidden");
+}
+
+async function loadIslamicClothing() {
+  const status = document.getElementById("clothingStatus");
+  const list   = document.getElementById("clothingList");
+  status.innerHTML = `<span class="spinner"></span>Finding Islamic clothing stores…`;
+  status.classList.remove("hidden", "error");
+  list.classList.add("hidden");
+  try {
+    const loc   = await getLocation();
+    const limit = getSettings().clothingLimit;
+    const res   = await fetch(`/api/islamic_clothing?lat=${loc.lat}&lng=${loc.lng}&limit=${limit}`);
+    const data  = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+    renderClothing(data.stores);
+    status.classList.add("hidden");
+  } catch (e) {
+    status.textContent = `Error: ${e.message}`;
+    status.classList.add("error");
+  }
+}
+
+document.getElementById("btnFindClothing").addEventListener("click", loadIslamicClothing);
 document.getElementById("btnHideGrocery").addEventListener("click", () => {
   document.getElementById("groceryList").classList.add("hidden");
   document.getElementById("btnHideGrocery").classList.add("hidden");

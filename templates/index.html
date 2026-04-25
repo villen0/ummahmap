@@ -111,6 +111,15 @@
           <option value="10">10 nearest</option>
         </select>
       </div>
+      <div class="setting-group">
+        <label>Islamic Clothing to Show</label>
+        <select id="settingClothingLimit">
+          <option value="3" selected>3 nearest</option>
+          <option value="5">5 nearest</option>
+          <option value="8">8 nearest</option>
+          <option value="10">10 nearest</option>
+        </select>
+      </div>
       <button class="btn-primary full-width" id="applySettings">Apply &amp; Refresh</button>
       <div class="setting-divider"></div>
       <div class="setting-group">
@@ -268,6 +277,16 @@
         <div id="groceryStatus" class="status-msg hidden"></div>
         <div id="groceryList" class="mosque-list hidden"></div>
         <button class="btn-ghost full-width hidden" id="btnHideGrocery" style="margin-top:10px">✕ Hide results</button>
+      </section>
+
+      <!-- Islamic Clothing -->
+      <section class="card" id="sectionClothing">
+        <div class="card-header">
+          <div class="card-title"><span class="card-icon">🧕</span> Islamic Clothing</div>
+          <button class="btn-ghost" id="btnFindClothing"><span class="btn-icon">📍</span> Find Nearby</button>
+        </div>
+        <div id="clothingStatus" class="status-msg hidden"></div>
+        <div id="clothingList" class="mosque-list hidden"></div>
       </section>
 
     </div><!-- /tab-discover -->
