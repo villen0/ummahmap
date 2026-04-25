@@ -468,7 +468,6 @@ async function loadPrayerTimes() {
     `;
     meta.classList.remove("hidden");
     status.classList.add("hidden");
-    document.getElementById("btnHidePrayer").classList.remove("hidden");
 
     // Countdown
     clearInterval(countdownInterval);
@@ -482,28 +481,6 @@ async function loadPrayerTimes() {
 
 document.getElementById("btnPrayerGps").addEventListener("click", loadPrayerTimes);
 
-document.getElementById("btnHidePrayer").addEventListener("click", () => {
-  document.getElementById("prayerCountdown").classList.add("hidden");
-  document.getElementById("prayerGpsCards").classList.add("hidden");
-  document.getElementById("prayerGpsMeta").classList.add("hidden");
-  document.getElementById("btnHidePrayer").classList.add("hidden");
-});
-
-document.getElementById("btnHideQibla").addEventListener("click", () => {
-  const body = document.getElementById("qiblaBody");
-  const btn  = document.getElementById("btnHideQibla");
-  const hiding = !body.classList.contains("hidden");
-  body.classList.toggle("hidden", hiding);
-  btn.textContent = hiding ? "▶ Show compass" : "✕ Hide compass";
-});
-
-document.getElementById("btnHideTasbih").addEventListener("click", () => {
-  const body = document.getElementById("tasbihBody");
-  const btn  = document.getElementById("btnHideTasbih");
-  const hiding = !body.classList.contains("hidden");
-  body.classList.toggle("hidden", hiding);
-  btn.textContent = hiding ? "▶ Show counter" : "✕ Hide counter";
-});
 
 
 // ===================== MOSQUES =====================
@@ -723,6 +700,8 @@ async function startEverything() {
   setHijriDate();
   loadPrayerTimes();
   loadMosques();
+  loadSurahList();
+  loadHadithBrowser(true);
 }
 
 // Auto-load on page ready
@@ -739,19 +718,6 @@ const translitCache = { en: {} };             // phonetic: EN only
 const translationCache = { bn: {}, ur: {} }; // translation: BN + UR (EN always fetched)
 
 
-// Toggle surah list
-document.getElementById("btnToggleSurahList").addEventListener("click", async () => {
-  const wrap = document.getElementById("surahListWrap");
-  const btn  = document.getElementById("btnToggleSurahList");
-  if (wrap.classList.contains("hidden")) {
-    if (!surahsLoaded) await loadSurahList();
-    wrap.classList.remove("hidden");
-    btn.textContent = "Hide surahs ▴";
-  } else {
-    wrap.classList.add("hidden");
-    btn.textContent = "Show all surahs ▾";
-  }
-});
 
 async function ensureSurahData() {
   if (surahsData.length > 0) return;
@@ -805,7 +771,6 @@ async function openSurah(surah) {
   document.getElementById("btnNextSurahBottom").style.display = "none";
   // Collapse surah browser so only the reader is visible
   document.getElementById("surahListWrap").classList.add("hidden");
-  document.getElementById("btnToggleSurahList").textContent = "Show all surahs ▾";
   // Show reader
   const reader = document.getElementById("quranReader");
   reader.classList.remove("hidden");
@@ -923,12 +888,9 @@ document.getElementById("btnNextSurah").addEventListener("click", () => navigate
 document.getElementById("btnNextSurahBottom").addEventListener("click", () => navigateSurah(1));
 document.getElementById("btnCloseReader").addEventListener("click", async () => {
   document.getElementById("quranReader").classList.add("hidden");
-  // Re-expand surah list so user can pick another surah
   const wrap = document.getElementById("surahListWrap");
-  const toggleBtn = document.getElementById("btnToggleSurahList");
   if (!surahsLoaded) await loadSurahList();
   wrap.classList.remove("hidden");
-  toggleBtn.textContent = "Hide surahs ▴";
   document.getElementById("quranSurahBrowser").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
@@ -960,16 +922,6 @@ let currentHadithNum = null;
 // ---- Hadith browser ----
 let hadithBrowserPage       = 0;
 let hadithBrowserCollection = null;
-let hadithBrowserOpen       = false;
-
-function toggleHadithBrowser(forceOpen) {
-  const panel = document.getElementById("hadithBrowser");
-  const btn   = document.getElementById("btnHadithBrowse");
-  hadithBrowserOpen = forceOpen !== undefined ? forceOpen : !hadithBrowserOpen;
-  panel.classList.toggle("hidden", !hadithBrowserOpen);
-  btn.style.color       = hadithBrowserOpen ? "var(--gold2)" : "";
-  btn.style.borderColor = hadithBrowserOpen ? "var(--gold)"  : "";
-}
 
 async function loadHadithBrowser(reset = false) {
   const col = document.getElementById("hadithCollection").value;
@@ -1016,15 +968,8 @@ async function loadHadithBrowser(reset = false) {
   }
 }
 
-document.getElementById("btnHadithBrowse").addEventListener("click", () => {
-  toggleHadithBrowser();
-  if (hadithBrowserOpen) loadHadithBrowser(true);
-});
 document.getElementById("btnHadithBrowserMore").addEventListener("click", () => loadHadithBrowser());
-// Reset browser when collection changes
-document.getElementById("hadithCollection").addEventListener("change", () => {
-  if (hadithBrowserOpen) loadHadithBrowser(true);
-});
+document.getElementById("hadithCollection").addEventListener("change", () => loadHadithBrowser(true));
 
 document.getElementById("btnHadithClose").addEventListener("click", () => {
   document.getElementById("hadithResult").classList.add("hidden");

@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/style.css?v={{ v }}" />
 </head>
 <body>
 
@@ -191,7 +191,6 @@
         <div id="prayerCountdown" class="countdown hidden"></div>
         <div id="prayerGpsCards" class="prayer-grid hidden"></div>
         <div id="prayerGpsMeta" class="meta-row hidden"></div>
-        <button class="btn-ghost full-width hidden" id="btnHidePrayer" style="margin-top:10px">✕ Hide results</button>
       </section>
 
       <!-- Qibla -->
@@ -226,7 +225,6 @@
             <button class="btn-enable-compass" id="btnEnableCompass" style="display:none;margin-top:6px">🧭 Enable Live Compass</button>
           </div>
         </div>
-        <button class="btn-ghost full-width" id="btnHideQibla" style="margin-top:10px">✕ Hide compass</button>
       </section>
 
     </div><!-- /tab-prayer -->
@@ -306,9 +304,8 @@
           </div>
           <div class="surah-browser-header">
             <span style="font-size:13px;color:var(--text3)">Browse &amp; tap a surah to read</span>
-            <button class="btn-ghost btn-xs" id="btnToggleSurahList">Show all surahs ▾</button>
           </div>
-          <div id="surahListWrap" class="surah-list-wrap hidden"></div>
+          <div id="surahListWrap" class="surah-list-wrap"></div>
         </div>
         <!-- Full surah reader -->
         <div id="quranReader" class="quran-reader-wrap hidden">
@@ -342,11 +339,10 @@
               <option value="ibnmajah">Ibn Majah</option>
               <option value="nasai">Nasa'i</option>
             </select>
-            <button class="btn-ghost" id="btnHadithBrowse"><span class="btn-icon">📋</span> Browse</button>
           </div>
         </div>
         <!-- Collection browser -->
-        <div id="hadithBrowser" class="hadith-browser hidden">
+        <div id="hadithBrowser" class="hadith-browser">
           <div id="hadithBrowserList" class="hadith-browser-list"></div>
           <button class="btn-ghost full-width" id="btnHadithBrowserMore" style="margin-top:8px">Load more ▾</button>
         </div>
@@ -411,7 +407,6 @@
             </button>
           </div>
         </div>
-        <button class="btn-ghost full-width" id="btnHideTasbih" style="margin-top:10px">✕ Hide counter</button>
       </section>
 
     </div><!-- /tab-tools -->
@@ -465,6 +460,6 @@
     </ol>
   </div>
 
-  <script src="/static/app.js" defer></script>
+  <script src="/static/app.js?v={{ v }}" defer></script>
 </body>
 </html>
