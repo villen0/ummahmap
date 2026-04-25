@@ -1,6 +1,7 @@
 import os
 import math
 import time
+import subprocess
 import smtplib
 import requests
 from email.mime.text import MIMEText
@@ -12,6 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
+
+try:
+    _v = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
+except Exception:
+    _v = "1"
+STATIC_VER = _v
 GOOGLE_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
 KAABA_LAT = 21.422487
@@ -49,7 +56,7 @@ def haversine_km(lat1, lng1, lat2, lng2):
 
 @app.route("/")
 def home():
-    return render_template("index.html", app_name="UmmahMap")
+    return render_template("index.html", app_name="UmmahMap", v=STATIC_VER)
 
 @app.route("/.well-known/assetlinks.json")
 def assetlinks():

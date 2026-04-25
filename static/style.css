@@ -217,25 +217,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--border2);
-  background: rgba(0,0,0,0.04);
-  color: var(--text2);
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(160,108,30,0.35);
+  background: linear-gradient(135deg, rgba(255,235,180,0.5) 0%, rgba(220,170,80,0.18) 100%);
+  color: var(--gold);
   cursor: pointer;
   flex-shrink: 0;
-  transition: color 0.18s, background 0.18s, border-color 0.18s, transform 0.35s ease;
+  box-shadow: 0 2px 8px rgba(160,108,30,0.12);
+  transition: color 0.18s, background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.4s ease;
 }
 .settings-btn svg {
   width: 18px;
   height: 18px;
 }
 .settings-btn:hover {
-  background: rgba(0,0,0,0.07);
-  border-color: rgba(184,124,42,0.4);
-  color: var(--gold2);
-  transform: rotate(45deg);
+  background: linear-gradient(135deg, rgba(220,170,80,0.35) 0%, rgba(160,108,30,0.22) 100%);
+  border-color: var(--gold2);
+  color: var(--gold);
+  box-shadow: 0 4px 16px rgba(160,108,30,0.25);
+  transform: rotate(60deg);
 }
 
 .btn-icon { font-size: 13px; }
