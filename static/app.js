@@ -1149,6 +1149,7 @@ async function loadIslamicClothing() {
     if (!res.ok) throw new Error(data.error || "Failed");
     renderClothing(data.stores);
     status.classList.add("hidden");
+    document.getElementById("btnHideClothing").classList.remove("hidden");
   } catch (e) {
     status.textContent = `Error: ${e.message}`;
     status.classList.add("error");
@@ -1156,6 +1157,10 @@ async function loadIslamicClothing() {
 }
 
 document.getElementById("btnFindClothing").addEventListener("click", loadIslamicClothing);
+document.getElementById("btnHideClothing").addEventListener("click", () => {
+  document.getElementById("clothingList").classList.add("hidden");
+  document.getElementById("btnHideClothing").classList.add("hidden");
+});
 document.getElementById("btnHideGrocery").addEventListener("click", () => {
   document.getElementById("groceryList").classList.add("hidden");
   document.getElementById("btnHideGrocery").classList.add("hidden");
