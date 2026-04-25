@@ -702,7 +702,6 @@ startQiblaLive();
 async function startEverything() {
   setHijriDate();
   loadPrayerTimes();
-  loadMosques();
 }
 
 // Auto-load on page ready
