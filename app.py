@@ -288,6 +288,72 @@ def halal_grocery():
     cache_set(cache_key, payload)
     return jsonify(payload)
 
+@app.route("/api/islamic_clothing")
+def islamic_clothing():
+    lat   = request.args.get("lat", type=float)
+    lng   = request.args.get("lng", type=float)
+    limit = min(request.args.get("limit", default=3, type=int), 10)
+    if not (lat and lng and GOOGLE_KEY):
+        return jsonify({"error": "Missing lat/lng or GOOGLE_MAPS_API_KEY"}), 400
+    cache_key = f"islamic_clothing_{round(lat,3)}_{round(lng,3)}_{limit}"
+    cached = cache_get(cache_key)
+    if cached:
+        return jsonify(cached)
+
+    url = "https://places.googleapis.com/v1/places:searchText"
+    headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_KEY,
+        "X-Goog-FieldMask": (
+            "places.id,places.displayName,places.formattedAddress,"
+            "places.location,places.rating,places.userRatingCount,"
+            "places.websiteUri,places.currentOpeningHours.openNow"
+        )
+    }
+    body = {
+        "textQuery": "islamic clothing store hijab abaya",
+        "maxResultCount": limit,
+        "locationBias": {
+            "circle": {
+                "center": {"latitude": lat, "longitude": lng},
+                "radius": 50000
+            }
+        },
+        "rankPreference": "DISTANCE"
+    }
+    try:
+        r = requests.post(url, json=body, headers=headers, timeout=15)
+        data = r.json()
+    except Exception:
+        return jsonify({"error": "Could not reach Google API"}), 502
+
+    results = data.get("places", [])
+    if not results:
+        return jsonify({"error": "No Islamic clothing stores found nearby"}), 404
+
+    stores = []
+    for m in results:
+        mlat = m["location"]["latitude"]
+        mlng = m["location"]["longitude"]
+        place_id = m.get("id", "")
+        name = m.get("displayName", {}).get("text", "")
+        dist_km = haversine_km(lat, lng, mlat, mlng)
+        stores.append({
+            "name": name,
+            "place_id": place_id,
+            "address": m.get("formattedAddress", ""),
+            "lat": mlat, "lng": mlng,
+            "distance_km": round(dist_km, 2),
+            "rating": m.get("rating"),
+            "open_now": m.get("currentOpeningHours", {}).get("openNow"),
+            "website": m.get("websiteUri") or None,
+            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
+            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query={quote_plus(name)}&query_place_id={place_id}"
+        })
+    payload = {"stores": stores, "count": len(stores)}
+    cache_set(cache_key, payload)
+    return jsonify(payload)
+
 @app.route("/api/qibla")
 def qibla():
     lat = request.args.get("lat", type=float)
