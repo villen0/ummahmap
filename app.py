@@ -16,10 +16,9 @@ app = Flask(__name__)
 
 # Derive a cache-busting version string from the current git commit hash.
 try:
-    _v = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
+    STATIC_VER = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
 except Exception:
-    _v = "1"
-STATIC_VER = _v
+    STATIC_VER = "1"
 GOOGLE_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Fixed coordinates for the Kaaba in Mecca, used for Qibla calculations.
@@ -54,6 +53,24 @@ def bearing_to_kaaba(lat, lng):
     brng = (math.degrees(math.atan2(y, x)) + 360) % 360
     return brng
 
+def format_place(m, lat, lng):
+    mlat = m["location"]["latitude"]
+    mlng = m["location"]["longitude"]
+    name = m.get("displayName", {}).get("text", "")
+    place_id = m.get("id", "")
+    dist_km = haversine_km(lat, lng, mlat, mlng)
+    return {
+        "name": name,
+        "place_id": place_id,
+        "address": m.get("formattedAddress", ""),
+        "lat": mlat, "lng": mlng,
+        "distance_km": round(dist_km, 2),
+        "rating": m.get("rating"),
+        "open_now": m.get("currentOpeningHours", {}).get("openNow"),
+        "website": m.get("websiteUri") or None,
+        "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
+        "maps_place_url": f"https://www.google.com/maps/search/?api=1&query={quote_plus(name)}&query_place_id={place_id}",
+    }
 
 def haversine_km(lat1, lng1, lat2, lng2):
     """Return the great-circle distance in kilometres between two coordinate pairs."""
@@ -133,25 +150,9 @@ def nearby_mosques():
 
     mosques = []
     for m in results:
-        mlat = m["location"]["latitude"]
-        mlng = m["location"]["longitude"]
-        place_id = m.get("id", "")
-        name = m.get("displayName", {}).get("text", "")
-        dist_km = haversine_km(lat, lng, mlat, mlng)
-        mosques.append({
-            "name": name,
-            "place_id": place_id,
-            "address": m.get("formattedAddress", ""),
-            "lat": mlat,
-            "lng": mlng,
-            "distance_km": round(dist_km, 2),
-            "distance_m": round(dist_km * 1000),
-            "rating": m.get("rating"),
-            "open_now": m.get("currentOpeningHours", {}).get("openNow"),
-            "website": m.get("websiteUri") or None,
-            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
-            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query={quote_plus(name)}&query_place_id={place_id}"
-        })
+        place = format_place(m, lat, lng)
+        place["distance_m"] = round(place["distance_km"] * 1000)
+        mosques.append(place)
 
     payload = {"mosques": mosques, "count": len(mosques)}
     cache_set(cache_key, payload)
@@ -213,26 +214,11 @@ def halal_restaurants():
 
     restaurants = []
     for m in results:
-        mlat = m["location"]["latitude"]
-        mlng = m["location"]["longitude"]
-        place_id = m.get("id", "")
-        name = m.get("displayName", {}).get("text", "")
-        dist_km = haversine_km(lat, lng, mlat, mlng)
-        restaurants.append({
-            "name": name,
-            "place_id": place_id,
-            "address": m.get("formattedAddress", ""),
-            "lat": mlat, "lng": mlng,
-            "distance_km": round(dist_km, 2),
-            "distance_m": round(dist_km * 1000),
-            "rating": m.get("rating"),
-            "user_ratings_total": m.get("userRatingCount"),
-            "price_level": price_map.get(m.get("priceLevel", ""), None),
-            "open_now": m.get("currentOpeningHours", {}).get("openNow"),
-            "website": m.get("websiteUri") or None,
-            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
-            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query={quote_plus(name)}&query_place_id={place_id}"
-        })
+        place = format_place(m, lat, lng)
+        place["distance_m"] = round(place["distance_km"] * 1000)
+        place["user_ratings_total"] = m.get("userRatingCount")
+        place["price_level"] = price_map.get(m.get("priceLevel", ""), None)
+        restaurants.append(place)
     payload = {"restaurants": restaurants, "count": len(restaurants)}
     cache_set(cache_key, payload)
     return jsonify(payload)
@@ -284,25 +270,10 @@ def halal_grocery():
 
     stores = []
     for m in results:
-        mlat = m["location"]["latitude"]
-        mlng = m["location"]["longitude"]
-        place_id = m.get("id", "")
-        name = m.get("displayName", {}).get("text", "")
-        dist_km = haversine_km(lat, lng, mlat, mlng)
-        stores.append({
-            "name": name,
-            "place_id": place_id,
-            "address": m.get("formattedAddress", ""),
-            "lat": mlat, "lng": mlng,
-            "distance_km": round(dist_km, 2),
-            "distance_m": round(dist_km * 1000),
-            "rating": m.get("rating"),
-            "user_ratings_total": m.get("userRatingCount"),
-            "open_now": m.get("currentOpeningHours", {}).get("openNow"),
-            "website": m.get("websiteUri") or None,
-            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
-            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query={quote_plus(name)}&query_place_id={place_id}"
-        })
+        place = format_place(m, lat, lng)
+        place["distance_m"] = round(place["distance_km"] * 1000)
+        place["user_ratings_total"] = m.get("userRatingCount")
+        stores.append(place)
     payload = {"stores": stores, "count": len(stores)}
     cache_set(cache_key, payload)
     return jsonify(payload)
@@ -352,25 +323,7 @@ def islamic_clothing():
     if not results:
         return jsonify({"error": "No Islamic clothing stores found nearby"}), 404
 
-    stores = []
-    for m in results:
-        mlat = m["location"]["latitude"]
-        mlng = m["location"]["longitude"]
-        place_id = m.get("id", "")
-        name = m.get("displayName", {}).get("text", "")
-        dist_km = haversine_km(lat, lng, mlat, mlng)
-        stores.append({
-            "name": name,
-            "place_id": place_id,
-            "address": m.get("formattedAddress", ""),
-            "lat": mlat, "lng": mlng,
-            "distance_km": round(dist_km, 2),
-            "rating": m.get("rating"),
-            "open_now": m.get("currentOpeningHours", {}).get("openNow"),
-            "website": m.get("websiteUri") or None,
-            "maps_directions_url": f"https://www.google.com/maps/dir/?api=1&destination={mlat},{mlng}&destination_place_id={place_id}",
-            "maps_place_url": f"https://www.google.com/maps/search/?api=1&query={quote_plus(name)}&query_place_id={place_id}"
-        })
+    stores = [format_place(m, lat, lng) for m in results]
     payload = {"stores": stores, "count": len(stores)}
     cache_set(cache_key, payload)
     return jsonify(payload)
