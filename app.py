@@ -14,29 +14,37 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Derive a cache-busting version string from the current git commit hash.
 try:
     STATIC_VER = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL).decode().strip()
 except Exception:
     STATIC_VER = "1"
 GOOGLE_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
+# Fixed coordinates for the Kaaba in Mecca, used for Qibla calculations.
 KAABA_LAT = 21.422487
 KAABA_LNG = 39.826206
 
-# Simple in-memory cache
+# Simple in-memory cache: stores {key: {"ts": timestamp, "data": payload}}.
 _cache = {}
-CACHE_TTL = 300  # 5 minutes
+CACHE_TTL = 300  # seconds (5 minutes)
+
 
 def cache_get(key):
+    """Return cached payload for key if it exists and hasn't expired, else None."""
     entry = _cache.get(key)
     if entry and (time.time() - entry["ts"]) < CACHE_TTL:
         return entry["data"]
     return None
 
+
 def cache_set(key, data):
+    """Store data under key with the current timestamp."""
     _cache[key] = {"ts": time.time(), "data": data}
 
+
 def bearing_to_kaaba(lat, lng):
+    """Return the compass bearing (0–360°) from (lat, lng) to the Kaaba using spherical geometry."""
     phi1 = math.radians(lat)
     phi2 = math.radians(KAABA_LAT)
     d_lambda = math.radians(KAABA_LNG - lng)
@@ -65,6 +73,7 @@ def format_place(m, lat, lng):
     }
 
 def haversine_km(lat1, lng1, lat2, lng2):
+    """Return the great-circle distance in kilometres between two coordinate pairs."""
     R = 6371
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     dphi = math.radians(lat2 - lat1)
@@ -72,12 +81,16 @@ def haversine_km(lat1, lng1, lat2, lng2):
     a = math.sin(dphi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(dlambda/2)**2
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
+
 @app.route("/")
 def home():
+    """Serve the main single-page application shell."""
     return render_template("index.html", app_name="UmmahMap", v=STATIC_VER)
+
 
 @app.route("/.well-known/assetlinks.json")
 def assetlinks():
+    """Serve Android Digital Asset Links JSON for TWA (Trusted Web Activity) verification."""
     data = [{
         "relation": ["delegate_permission/common.handle_all_urls"],
         "target": {
@@ -88,8 +101,10 @@ def assetlinks():
     }]
     return jsonify(data)
 
+
 @app.route("/api/nearby_mosques")
 def nearby_mosques():
+    """Find mosques near the given lat/lng using Google Places Nearby Search (v1)."""
     lat = request.args.get("lat", type=float)
     lng = request.args.get("lng", type=float)
     limit = min(request.args.get("limit", default=5, type=int), 10)
@@ -102,7 +117,6 @@ def nearby_mosques():
     if cached:
         return jsonify(cached)
 
-    # New Places API (v1) — Nearby Search
     url = "https://places.googleapis.com/v1/places:searchNearby"
     headers = {
         "Content-Type": "application/json",
@@ -144,8 +158,10 @@ def nearby_mosques():
     cache_set(cache_key, payload)
     return jsonify(payload)
 
+
 @app.route("/api/halal_restaurants")
 def halal_restaurants():
+    """Find halal restaurants near the given lat/lng using Google Places Text Search (v1)."""
     lat   = request.args.get("lat", type=float)
     lng   = request.args.get("lng", type=float)
     limit = min(request.args.get("limit", default=5, type=int), 10)
@@ -156,7 +172,6 @@ def halal_restaurants():
     if cached:
         return jsonify(cached)
 
-    # New Places API (v1) — Text Search for halal restaurants
     url = "https://places.googleapis.com/v1/places:searchText"
     headers = {
         "Content-Type": "application/json",
@@ -168,6 +183,7 @@ def halal_restaurants():
             "places.currentOpeningHours.openNow"
         )
     }
+    # Map Google's price-level enum strings to numeric values (0–4).
     price_map = {
         "PRICE_LEVEL_FREE": 0,
         "PRICE_LEVEL_INEXPENSIVE": 1,
@@ -207,8 +223,10 @@ def halal_restaurants():
     cache_set(cache_key, payload)
     return jsonify(payload)
 
+
 @app.route("/api/halal_grocery")
 def halal_grocery():
+    """Find halal grocery stores near the given lat/lng using Google Places Text Search (v1)."""
     lat   = request.args.get("lat", type=float)
     lng   = request.args.get("lng", type=float)
     limit = min(request.args.get("limit", default=5, type=int), 10)
@@ -260,8 +278,10 @@ def halal_grocery():
     cache_set(cache_key, payload)
     return jsonify(payload)
 
+
 @app.route("/api/islamic_clothing")
 def islamic_clothing():
+    """Find Islamic clothing stores near the given lat/lng using Google Places Text Search (v1)."""
     lat   = request.args.get("lat", type=float)
     lng   = request.args.get("lng", type=float)
     limit = min(request.args.get("limit", default=3, type=int), 10)
@@ -308,16 +328,20 @@ def islamic_clothing():
     cache_set(cache_key, payload)
     return jsonify(payload)
 
+
 @app.route("/api/qibla")
 def qibla():
+    """Return the Qibla bearing in degrees from the given coordinates to Mecca."""
     lat = request.args.get("lat", type=float)
     lng = request.args.get("lng", type=float)
     if not (lat and lng):
         return jsonify({"error": "Missing lat/lng"}), 400
     return jsonify({"bearing_deg": bearing_to_kaaba(lat, lng)})
 
+
 @app.route("/api/prayer_times")
 def prayer_times():
+    """Fetch today's prayer times from AlAdhan API for the given location, method, and Asr school."""
     lat = request.args.get("lat", type=float)
     lng = request.args.get("lng", type=float)
     method = request.args.get("method", default=2, type=int)
@@ -326,7 +350,7 @@ def prayer_times():
     if not (lat and lng):
         return jsonify({"error": "Missing lat/lng"}), 400
 
-    # Validate enumerated parameters
+    # Clamp to supported AlAdhan calculation method IDs; default to ISNA (2) if invalid.
     VALID_METHODS = {1,2,3,4,5,7,8,9,10,11,12,13,14,15,16,17,99}
     if method not in VALID_METHODS:
         method = 2
@@ -353,6 +377,7 @@ def prayer_times():
     meta = data["data"]["meta"]
     date = data["data"]["date"]
 
+    # Return only the six canonical prayer times plus date/timezone metadata.
     payload = {
         "timings": {
             "Fajr": timings.get("Fajr"),
@@ -370,7 +395,8 @@ def prayer_times():
     cache_set(cache_key, payload)
     return jsonify(payload)
 
-# Permanent in-memory cache for hadith collections (they never change)
+
+# Permanent in-memory cache for hadith collections (loaded once, never invalidated).
 _hadith_collections = {}
 
 HADITH_EDITIONS = {
@@ -382,8 +408,9 @@ HADITH_EDITIONS = {
     "nasai":    "eng-nasai",
 }
 
+
 def load_hadith_collection(collection):
-    """Fetch full collection from GitHub raw on first use, cache forever."""
+    """Fetch the full hadith collection from GitHub on first use and cache it permanently."""
     if collection in _hadith_collections:
         return _hadith_collections[collection]
     edition = HADITH_EDITIONS[collection]
@@ -391,15 +418,16 @@ def load_hadith_collection(collection):
     r = requests.get(url, timeout=30)
     r.raise_for_status()
     data = r.json()
-    # Build lookup dict: hadithnumber → hadith object
+    # Build a hadithnumber→hadith lookup dict for O(1) access.
     lookup = {h["hadithnumber"]: h for h in data.get("hadiths", [])}
-    # Also store section names for chapter lookup
     sections = data.get("metadata", {}).get("sections", {})
     _hadith_collections[collection] = {"hadiths": lookup, "sections": sections}
     return _hadith_collections[collection]
 
+
 @app.route("/api/hadith/<collection>/list")
 def hadith_list(collection):
+    """Return a paginated list of hadiths with number, text snippet, and chapter name."""
     if collection not in HADITH_EDITIONS:
         return jsonify({"error": "Unknown collection"}), 400
     page     = request.args.get("page", default=1, type=int)
@@ -425,8 +453,10 @@ def hadith_list(collection):
     return jsonify({"hadiths": result, "page": page, "total": total,
                     "loaded": min(end, total), "has_more": end < total})
 
+
 @app.route("/api/hadith/<collection>/<int:num>")
 def hadith(collection, num):
+    """Return a single hadith by number including its text, grade, chapter, and reference."""
     if collection not in HADITH_EDITIONS:
         return jsonify({"error": "Unknown collection"}), 400
     try:
@@ -436,11 +466,9 @@ def hadith(collection, num):
     h = col["hadiths"].get(num)
     if not h:
         return jsonify({"error": f"Hadith {num} not found in {collection}"}), 404
-    # Resolve chapter name from section metadata
     ref = h.get("reference", {})
     book_num = str(ref.get("book", ""))
     chapter = col["sections"].get(book_num, "")
-    # Flatten grades array to a single string
     grades = h.get("grades", [])
     grade_str = grades[0].get("grade", "") if grades else ""
     return jsonify({
@@ -451,8 +479,10 @@ def hadith(collection, num):
         "reference": ref,
     })
 
+
 @app.route("/api/hadith/<collection>/search")
 def hadith_search(collection):
+    """Search hadith text for a query string; returns up to 20 matching results with snippets."""
     if collection not in HADITH_EDITIONS:
         return jsonify({"error": "Unknown collection"}), 400
     q = request.args.get("q", "").strip()
@@ -483,6 +513,7 @@ def hadith_search(collection):
 
 @app.route("/api/report_issue", methods=["POST"])
 def report_issue():
+    """Receive a user-submitted bug report and forward it via Gmail SMTP."""
     data = request.get_json(silent=True) or {}
     issue_type = str(data.get("type", "General")).strip()[:100]
     description = str(data.get("description", "")).strip()[:2000]
@@ -512,7 +543,7 @@ def report_issue():
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(gmail_user, gmail_pass)
             server.sendmail(gmail_user, gmail_user, msg.as_string())
-    except Exception as e:
+    except Exception:
         return jsonify({"error": "Failed to send report"}), 500
 
     return jsonify({"success": True})

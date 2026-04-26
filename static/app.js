@@ -1001,7 +1001,7 @@ async function fetchHadith(collection, num) {
 
 function renderHadith(data, collection, num) {
   currentHadithNum = num;
-  const text  = data.hadith_english || data.text || data.body || "Text unavailable.";
+  const text  = data.text || "Text unavailable.";
   const grade = (data.grade || "").trim();
   const chapter = data.chapter_english || data.chapter || "";
   document.getElementById("hadithLabel").textContent = `${COLL_NAMES[collection]} · #${num}`;
@@ -1025,9 +1025,6 @@ document.getElementById("btnHadithPrev").addEventListener("click", () => {
 document.getElementById("btnHadithNext").addEventListener("click", () => {
   const col = document.getElementById("hadithCollection").value;
   if (currentHadithNum < (HADITH_MAX[col] || 9999)) fetchHadith(col, currentHadithNum + 1);
-});
-document.getElementById("btnHadithClose").addEventListener("click", () => {
-  document.getElementById("hadithResult").classList.add("hidden");
 });
 
 
