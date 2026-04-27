@@ -365,6 +365,7 @@ def islamic_clothing():
             "address": m.get("formattedAddress", ""),
             "lat": mlat, "lng": mlng,
             "distance_km": round(dist_km, 2),
+            "distance_m": round(dist_km * 1000),
             "rating": m.get("rating"),
             "open_now": m.get("currentOpeningHours", {}).get("openNow"),
             "website": m.get("websiteUri") or None,

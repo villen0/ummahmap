@@ -333,23 +333,6 @@ function getLocation() {
 }
 
 
-// ===================== HIJRI DATE =====================
-async function setHijriDate() {
-  const el = document.getElementById("hijriDate");
-  if (!el) return;
-  try {
-    const loc = await getLocation();
-    const res = await fetch(`/api/prayer_times?lat=${loc.lat}&lng=${loc.lng}&method=${getSettings().method}&school=${getSettings().school}`);
-    const data = await res.json();
-    const h = data.hijri;
-    const cleanMonth = h.month.en.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    el.textContent = `${h.weekday?.en || ""}, ${h.day} ${cleanMonth} ${h.year} AH`;
-  } catch {
-    el.textContent = "Hijri date unavailable";
-  }
-}
-
-
 // ===================== PRAYER TIMES =====================
 let prayerTimings = null;
 let countdownInterval = null;
@@ -704,7 +687,6 @@ startQiblaLive();
 
 // ===================== BOOT =====================
 async function startEverything() {
-  setHijriDate();
   loadPrayerTimes();
 }
 
@@ -1004,7 +986,7 @@ function renderHadith(data, collection, num) {
   currentHadithNum = num;
   const text  = data.text || "Text unavailable.";
   const grade = (data.grade || "").trim();
-  const chapter = data.chapter_english || data.chapter || "";
+  const chapter = data.chapter || "";
   document.getElementById("hadithLabel").textContent = `${COLL_NAMES[collection]} · #${num}`;
   document.getElementById("hadithBody").textContent = text;
   document.getElementById("hadithRef").textContent = `${COLL_NAMES[collection]}, Hadith ${num}`;
