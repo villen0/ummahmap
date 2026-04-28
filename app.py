@@ -553,6 +553,91 @@ def report_issue():
     return jsonify({"success": True})
 
 
+ISLAMIC_SYSTEM_PROMPT = (
+    "You are an Islamic assistant embedded in UmmahMap, a Muslim utility app. "
+    "Help users with questions about: Quran, Hadith, Salah, Sawm, Zakat, Hajj, "
+    "Islamic jurisprudence (Fiqh), Islamic history, Arabic terms, du'a, and "
+    "daily Muslim life. Be respectful, balanced, and cite sources where possible. "
+    "If a question is unrelated to Islam or Muslim life, kindly redirect the user "
+    "to ask Islamic questions."
+)
+
+VALID_PROVIDERS = {"openai", "anthropic", "gemini", "groq"}
+
+
+@app.route("/api/ai_chat", methods=["POST"])
+def ai_chat():
+    """Proxy an Islamic AI chat request to the user's chosen provider using their own API key."""
+    body = request.get_json(silent=True) or {}
+    provider  = str(body.get("provider", "")).strip().lower()
+    api_key   = str(body.get("apiKey", "")).strip()
+    messages  = body.get("messages", [])
+
+    if provider not in VALID_PROVIDERS:
+        return jsonify({"error": "Invalid provider. Choose: openai, anthropic, gemini, groq"}), 400
+    if not api_key:
+        return jsonify({"error": "API key is required"}), 400
+    if not messages or not isinstance(messages, list):
+        return jsonify({"error": "messages array is required"}), 400
+
+    # Prepend Islamic system prompt as first message.
+    system_messages = [{"role": "system", "content": ISLAMIC_SYSTEM_PROMPT}] + messages
+
+    try:
+        if provider in ("openai", "groq"):
+            # Both use the OpenAI-compatible chat completions API.
+            url   = ("https://api.openai.com/v1/chat/completions" if provider == "openai"
+                     else "https://api.groq.com/openai/v1/chat/completions")
+            model = "gpt-4o-mini" if provider == "openai" else "llama-3.3-70b-versatile"
+            r = requests.post(url, json={"model": model, "messages": system_messages},
+                              headers={"Authorization": f"Bearer {api_key}",
+                                       "Content-Type": "application/json"},
+                              timeout=30)
+            r.raise_for_status()
+            reply = r.json()["choices"][0]["message"]["content"]
+
+        elif provider == "anthropic":
+            # Anthropic uses a distinct messages format; system prompt is a top-level field.
+            r = requests.post(
+                "https://api.anthropic.com/v1/messages",
+                json={"model": "claude-haiku-4-5-20251001", "max_tokens": 1024,
+                      "system": ISLAMIC_SYSTEM_PROMPT, "messages": messages},
+                headers={"x-api-key": api_key, "anthropic-version": "2023-06-01",
+                         "Content-Type": "application/json"},
+                timeout=30
+            )
+            r.raise_for_status()
+            reply = r.json()["content"][0]["text"]
+
+        elif provider == "gemini":
+            # Gemini uses a different request shape; system instruction is separate.
+            url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+                   f"gemini-1.5-flash:generateContent?key={api_key}")
+            # Convert messages to Gemini's {role, parts} format.
+            gemini_contents = [
+                {"role": ("model" if m["role"] == "assistant" else "user"),
+                 "parts": [{"text": m["content"]}]}
+                for m in messages
+            ]
+            r = requests.post(url, json={
+                "system_instruction": {"parts": [{"text": ISLAMIC_SYSTEM_PROMPT}]},
+                "contents": gemini_contents
+            }, headers={"Content-Type": "application/json"}, timeout=30)
+            r.raise_for_status()
+            reply = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+    except requests.HTTPError as e:
+        try:
+            err_msg = e.response.json()
+        except Exception:
+            err_msg = e.response.text[:200]
+        return jsonify({"error": f"Provider returned an error: {err_msg}"}), 502
+    except Exception:
+        return jsonify({"error": "Failed to reach AI provider. Check your API key and try again."}), 502
+
+    return jsonify({"reply": reply})
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
