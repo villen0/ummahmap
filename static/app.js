@@ -24,7 +24,6 @@ function safeUrl(url) {
 
     if (name === 'quran'  && !surahsLoaded)           loadSurahList();
     if (name === 'hadith' && !hadithBrowserCollection) loadHadithBrowser(true);
-    if (name === 'ai') renderAITab();
 
     // Panels
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -47,6 +46,9 @@ function safeUrl(url) {
       b.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
 
+    // Lazy-init AI tab after panel is active so any error can't blank the app
+    if (name === 'ai') { try { renderAITab(); } catch(e) { /* non-fatal */ } }
+
     localStorage.setItem('um_active_tab', name);
   }
 
@@ -55,9 +57,9 @@ function safeUrl(url) {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  // Restore last active tab (default: prayer)
+  // Restore last active tab (default: prayer); AI tab never restored on refresh
   const saved = localStorage.getItem('um_active_tab') || 'prayer';
-  switchTab(saved);
+  switchTab(saved === 'ai' ? 'prayer' : saved);
 })();
 
 
