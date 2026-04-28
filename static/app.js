@@ -1263,6 +1263,28 @@ async function loadHalalGrocery() {
 let tasbihCount = 0;
 let tasbihGoal  = 33;
 
+// Dhikr data: Arabic text, transliteration, and English meaning for each option.
+const DHIKR_DATA = {
+  subhanallah:   { ar: "سُبْحَانَ ٱللَّٰهِ",          translit: "Subhāna-llāh",          meaning: "Glory be to Allah" },
+  alhamdulillah: { ar: "ٱلْحَمْدُ لِلَّٰهِ",          translit: "Al-ḥamdu li-llāh",       meaning: "All praise be to Allah" },
+  allahuakbar:   { ar: "ٱللَّٰهُ أَكْبَرُ",            translit: "Allāhu Akbar",            meaning: "Allah is the Greatest" },
+  lailaha:       { ar: "لَا إِلَٰهَ إِلَّا ٱللَّٰهُ", translit: "Lā ilāha illa-llāh",     meaning: "There is no god but Allah" },
+  astaghfirullah:{ ar: "أَسْتَغْفِرُ ٱللَّٰهَ",       translit: "Astaghfiru-llāh",        meaning: "I seek forgiveness from Allah" },
+};
+
+// Updates the dhikr display card to show the Arabic, transliteration, and meaning of the selected dhikr.
+function updateDhikrDisplay() {
+  const key  = document.getElementById("tasbihDhikr").value;
+  const data = DHIKR_DATA[key];
+  if (!data) return;
+  document.getElementById("tasbihDhikrAr").textContent      = data.ar;
+  document.getElementById("tasbihDhikrTranslit").textContent = data.translit;
+  document.getElementById("tasbihDhikrMeaning").textContent  = data.meaning;
+}
+
+document.getElementById("tasbihDhikr").addEventListener("change", updateDhikrDisplay);
+updateDhikrDisplay(); // show default on load
+
 // Redraws the SVG progress ring and updates the count/goal labels.
 function tasbihUpdateRing() {
   const circ   = 314.16;
