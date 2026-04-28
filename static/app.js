@@ -105,6 +105,7 @@ const QUOTES = [
 ];
 
 let quoteQueue = [];
+// Returns the next quote from a shuffled queue; refills and reshuffles when empty.
 function nextQuote() {
   if (!quoteQueue.length) {
     quoteQueue = [...Array(QUOTES.length).keys()].sort(() => Math.random() - 0.5);
@@ -112,6 +113,7 @@ function nextQuote() {
   return QUOTES[quoteQueue.pop()];
 }
 
+// Fades out the current quote, swaps in the next one, then fades back in.
 function setQuote() {
   const textEl = document.getElementById("quote");
   const srcEl  = document.getElementById("quoteSrc");
@@ -130,6 +132,7 @@ setInterval(setQuote, 45 * 1000);
 
 
 // ===================== SETTINGS =====================
+// Reads all user preferences from localStorage, returning defaults if unset.
 function getSettings() {
   return {
     method:       parseInt(localStorage.getItem("um_method")         || "2", 10),
@@ -141,6 +144,7 @@ function getSettings() {
   };
 }
 
+// Persists the current settings form values to localStorage.
 function saveSettings() {
   const m   = document.getElementById("settingMethod").value;
   const s   = document.getElementById("settingSchool").value;
@@ -156,6 +160,7 @@ function saveSettings() {
   localStorage.setItem("um_clothing_limit", cl);
 }
 
+// Syncs all settings dropdowns to the values stored in localStorage.
 function applySettingsToUI() {
   const s = getSettings();
   document.getElementById("settingMethod").value         = s.method;
@@ -166,12 +171,14 @@ function applySettingsToUI() {
   document.getElementById("settingClothingLimit").value  = s.clothingLimit;
 }
 
+// Opens the settings side panel and populates it with current values.
 function openSettings() {
   applySettingsToUI();
   document.getElementById("settingsPanel").classList.remove("hidden");
   document.getElementById("settingsOverlay").classList.remove("hidden");
 }
 
+// Hides the settings side panel and its backdrop overlay.
 function closeSettings() {
   document.getElementById("settingsPanel").classList.add("hidden");
   document.getElementById("settingsOverlay").classList.add("hidden");
@@ -181,19 +188,26 @@ document.getElementById("openSettings").addEventListener("click", openSettings);
 document.getElementById("closeSettings").addEventListener("click", closeSettings);
 document.getElementById("settingsOverlay").addEventListener("click", closeSettings);
 
+// On apply: save settings, reset location cache, reload prayer times, and re-fetch any
+// discovery lists that were already visible so they reflect the new result limits.
 document.getElementById("applySettings").addEventListener("click", () => {
   saveSettings();
   closeSettings();
   cachedLoc = null;
-  const halalWasShown   = !document.getElementById("halalList").classList.contains("hidden");
-  const groceryWasShown = !document.getElementById("groceryList").classList.contains("hidden");
+  const mosqueWasShown   = !document.getElementById("mosqueList").classList.contains("hidden");
+  const halalWasShown    = !document.getElementById("halalList").classList.contains("hidden");
+  const groceryWasShown  = !document.getElementById("groceryList").classList.contains("hidden");
+  const clothingWasShown = !document.getElementById("clothingList").classList.contains("hidden");
   startEverything();
-  if (halalWasShown)   loadHalalRestaurants();
-  if (groceryWasShown) loadHalalGrocery();
+  if (mosqueWasShown)   loadMosques();
+  if (halalWasShown)    loadHalalRestaurants();
+  if (groceryWasShown)  loadHalalGrocery();
+  if (clothingWasShown) loadIslamicClothing();
 });
 
 
 // ===================== REPORT ISSUE =====================
+// Opens the issue report panel, closing settings first and resetting the form.
 function openReport() {
   closeSettings();
   document.getElementById("reportPanel").classList.remove("hidden");
@@ -204,6 +218,7 @@ function openReport() {
   document.getElementById("reportType").selectedIndex = 0;
 }
 
+// Hides the issue report panel and its backdrop overlay.
 function closeReport() {
   document.getElementById("reportPanel").classList.add("hidden");
   document.getElementById("reportOverlay").classList.add("hidden");
@@ -259,16 +274,20 @@ document.getElementById("btnSubmitReport").addEventListener("click", async () =>
 // ===================== QURAN BOOKMARKS =====================
 const BM_KEY = "um_quran_bookmarks";
 
+// Returns the saved bookmarks array from localStorage, or [] on parse error.
 function getBookmarks() {
   try { return JSON.parse(localStorage.getItem(BM_KEY)) || []; }
   catch { return []; }
 }
+// Persists the bookmarks array to localStorage.
 function saveBookmarks(bms) {
   localStorage.setItem(BM_KEY, JSON.stringify(bms));
 }
+// Returns true if the given ayah is already bookmarked.
 function isBookmarked(surahNum, ayahNum) {
   return getBookmarks().some(b => b.surah === surahNum && b.ayah === ayahNum);
 }
+// Adds or removes a bookmark; caps the list at 20. Returns true if added.
 function toggleBookmark(surahNum, ayahNum, surahName, surahAr) {
   let bms = getBookmarks();
   const idx = bms.findIndex(b => b.surah === surahNum && b.ayah === ayahNum);
@@ -282,6 +301,7 @@ function toggleBookmark(surahNum, ayahNum, surahName, surahAr) {
   renderBookmarkSection();
   return idx < 0;
 }
+// Re-renders the bookmark list; hides the whole section if there are no bookmarks.
 function renderBookmarkSection() {
   const bms = getBookmarks();
   const wrap = document.getElementById("quranBookmarks");
@@ -316,6 +336,7 @@ renderBookmarkSection();
 // ===================== LOCATION =====================
 let cachedLoc = null;
 
+// Returns a cached {lat, lng} if available, otherwise requests fresh GPS coordinates.
 function getLocation() {
   if (cachedLoc) return Promise.resolve(cachedLoc);
   return new Promise((resolve, reject) => {
@@ -332,27 +353,11 @@ function getLocation() {
 }
 
 
-// ===================== HIJRI DATE =====================
-async function setHijriDate() {
-  const el = document.getElementById("hijriDate");
-  if (!el) return;
-  try {
-    const loc = await getLocation();
-    const res = await fetch(`/api/prayer_times?lat=${loc.lat}&lng=${loc.lng}&method=${getSettings().method}&school=${getSettings().school}`);
-    const data = await res.json();
-    const h = data.hijri;
-    const cleanMonth = h.month.en.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    el.textContent = `${h.weekday?.en || ""}, ${h.day} ${cleanMonth} ${h.year} AH`;
-  } catch {
-    el.textContent = "Hijri date unavailable";
-  }
-}
-
-
 // ===================== PRAYER TIMES =====================
 let prayerTimings = null;
 let countdownInterval = null;
 
+// Parses a "HH:MM" time string into a Date object set to today's date.
 function parseTime(str) {
   // str like "05:32" or "05:32 (EST)"
   const match = str.match(/^(\d{1,2}):(\d{2})/);
@@ -361,6 +366,7 @@ function parseTime(str) {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(match[1]), parseInt(match[2]), 0, 0);
 }
 
+// Converts a 24-hour "HH:MM" string to 12-hour "H:MM AM/PM" format.
 function to12h(str) {
   const match = str.match(/^(\d{1,2}):(\d{2})/);
   if (!match) return str;
@@ -371,6 +377,7 @@ function to12h(str) {
   return `${h}:${m} ${ampm}`;
 }
 
+// Returns {name, time} for the next upcoming prayer; wraps to Fajr next day if past Isha.
 function findNextPrayer(timings) {
   const order = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
   const now = new Date();
@@ -387,6 +394,7 @@ function findNextPrayer(timings) {
   return null;
 }
 
+// Formats a millisecond duration as "Xh YYm" or "Xm YYs".
 function formatCountdown(ms) {
   const total = Math.floor(ms / 1000);
   const h = Math.floor(total / 3600);
@@ -396,6 +404,7 @@ function formatCountdown(ms) {
   return `${m}m ${String(s).padStart(2,"0")}s`;
 }
 
+// Refreshes the countdown banner with the time remaining until the next prayer.
 function updateCountdown() {
   const cd = document.getElementById("prayerCountdown");
   if (!prayerTimings) return;
@@ -412,6 +421,7 @@ const ARABIC_PRAYER_NAMES = {
   Asr: "العصر", Maghrib: "المغرب", Isha: "العشاء"
 };
 
+// Builds the prayer time grid, marking the next upcoming prayer and any currently active one.
 function renderPrayerCards(timings) {
   const grid = document.getElementById("prayerGpsCards");
   const order = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
@@ -438,6 +448,7 @@ function renderPrayerCards(timings) {
   grid.classList.remove("hidden");
 }
 
+// Fetches prayer times from the API and renders the grid, meta row, and countdown.
 async function loadPrayerTimes() {
   const status = document.getElementById("prayerGpsStatus");
   const grid   = document.getElementById("prayerGpsCards");
@@ -490,11 +501,13 @@ document.getElementById("btnPrayerGps").addEventListener("click", loadPrayerTime
 
 
 // ===================== MOSQUES =====================
+// Formats a place's distance_km as a human-readable "X ft away" or "X.X mi away" string.
 function distLabel(m) {
   const mi = m.distance_km * 0.621371;
   return mi < 0.1 ? `${Math.round(mi * 5280)} ft away` : `${mi.toFixed(1)} mi away`;
 }
 
+// Renders mosque cards into the list, with rank, distance, open status, and action links.
 function renderMosques(mosques) {
   const list = document.getElementById("mosqueList");
   list.innerHTML = "";
@@ -531,6 +544,7 @@ function renderMosques(mosques) {
   document.getElementById("btnHideMosques").classList.remove("hidden");
 }
 
+// Fetches nearby mosques from the API and renders them, showing a spinner while loading.
 async function loadMosques() {
   const status = document.getElementById("mosqueStatus");
   const list   = document.getElementById("mosqueList");
@@ -570,29 +584,34 @@ let watchId         = null;
 let startedQibla    = false;
 let usingAbsolute   = false;  // true once we receive a deviceorientationabsolute event
 
+// Normalises any angle to the [0, 360) range.
 function normalizeDeg(d) { return ((d % 360) + 360) % 360; }
 
-// Interpolate between two angles via shortest path (handles 0/360 wraparound)
+// Interpolates between two angles via the shortest arc, handling the 0/360 wraparound.
 function lerpAngle(from, to, alpha) {
   const diff = ((to - from + 540) % 360) - 180;
   return (from + diff * alpha + 360) % 360;
 }
 
+// Rotates the Qibla arrow element to the given bearing in degrees.
 function rotateArrow(deg) {
   const el = document.getElementById("qiblaArrow");
   if (el) el.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
 }
 
+// Rotates the compass cardinal labels so they stay aligned with true north.
 function rotateLabels(deg) {
   const el = document.querySelector(".compass-labels");
   if (el) el.style.transform = `rotate(${deg}deg)`;
 }
 
+// Updates the numeric bearing display; shows "—" for invalid values.
 function setBearingText(v) {
   const el = document.getElementById("qiblaBearing");
   if (el) el.textContent = typeof v === "number" && !isNaN(v) ? v.toFixed(1) : "—";
 }
 
+// Fetches the Qibla bearing in degrees from the backend for the given coordinates.
 async function fetchQibla(lat, lng) {
   const res = await fetch(`/api/qibla?lat=${lat}&lng=${lng}`);
   const data = await res.json();
@@ -600,6 +619,7 @@ async function fetchQibla(lat, lng) {
   return data.bearing_deg;
 }
 
+// Starts a GPS watch that re-fetches the Qibla bearing whenever the position changes.
 function startLocationWatch() {
   if (!navigator.geolocation) return;
   if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
@@ -619,6 +639,7 @@ function startLocationWatch() {
   );
 }
 
+// Processes a device orientation event, applies a low-pass smoothing filter, and updates the compass.
 function handleOrientation(e) {
   // Prefer absolute (north-referenced) events; ignore non-absolute once we have them
   if (!e.absolute && usingAbsolute) return;
@@ -654,12 +675,14 @@ function handleOrientation(e) {
   }
 }
 
+// Registers listeners for both absolute and standard orientation events.
 function startCompass() {
   // Listen for both; handleOrientation will prefer absolute events
   window.addEventListener("deviceorientationabsolute", handleOrientation, true);
   window.addEventListener("deviceorientation", handleOrientation, true);
 }
 
+// Resets compass state and starts both orientation listeners and the GPS location watch.
 function _doStartCompass() {
   startedQibla    = true;
   usingAbsolute   = false;
@@ -668,6 +691,7 @@ function _doStartCompass() {
   startLocationWatch();
 }
 
+// Entry point for the live Qibla compass; requests iOS motion permission or starts immediately on Android/desktop.
 function startQiblaLive() {
   if (startedQibla) return;
   // iOS 13+: DeviceOrientationEvent.requestPermission must be called from a user gesture.
@@ -702,8 +726,8 @@ startQiblaLive();
 
 
 // ===================== BOOT =====================
+// Bootstraps the app on page load: fetches prayer times immediately.
 async function startEverything() {
-  setHijriDate();
   loadPrayerTimes();
 }
 
@@ -717,11 +741,12 @@ let surahsLoaded = false;
 let currentSurah = null;
 let ayahOffset = 0;
 const AYAHS_PER_LOAD = 20;
-const translitCache = { en: {} };             // phonetic: EN only
-const translationCache = { bn: {}, ur: {} }; // translation: BN + UR (EN always fetched)
+const translitCache = { en: {} };                    // phonetic: EN only
+const translationCache = { en: {}, bn: {}, ur: {} }; // translation: EN + BN + UR
 
 
 
+// Fetches the list of all 114 surahs from AlQuran Cloud if not already loaded.
 async function ensureSurahData() {
   if (surahsData.length > 0) return;
   const res  = await fetch("https://api.alquran.cloud/v1/surah");
@@ -729,6 +754,7 @@ async function ensureSurahData() {
   surahsData = data.data;
 }
 
+// Renders the clickable surah browser list; called lazily when the Quran tab is first opened.
 async function loadSurahList() {
   surahsLoaded = true;
   const wrap = document.getElementById("surahListWrap");
@@ -754,12 +780,14 @@ async function loadSurahList() {
   }
 }
 
+// Disables the prev/next surah nav buttons when at the first or last surah.
 function updateSurahNavButtons() {
   const idx = surahsData.findIndex(s => s.number === currentSurah.number);
   document.getElementById("btnPrevSurah").disabled = idx <= 0;
   document.getElementById("btnNextSurah").disabled = idx < 0 || idx >= surahsData.length - 1;
 }
 
+// Navigates to the surah adjacent to the current one; delta is +1 or -1.
 async function navigateSurah(delta) {
   try { await ensureSurahData(); } catch { return; }
   const idx  = surahsData.findIndex(s => s.number === currentSurah.number);
@@ -767,6 +795,7 @@ async function navigateSurah(delta) {
   if (next) await openSurah(next);
 }
 
+// Opens the surah reader for the given surah object, resetting offset and loading the first batch.
 async function openSurah(surah) {
   currentSurah = surah;
   ayahOffset   = 0;
@@ -789,25 +818,27 @@ async function openSurah(surah) {
 }
 
 
-// Core fetch+render — no button state touched. Returns { end, total }.
+// Fetches and renders one batch of ayahs (AYAHS_PER_LOAD) starting at offset; returns {end, total}.
+// Translations are cached per surah so repeat batches don't re-fetch them.
 async function renderAyahBatch(surah, offset) {
-  let trEn = translitCache.en[surah.number];
-  let trBn = translationCache.bn[surah.number];
-  let trUr = translationCache.ur[surah.number];
-  const [arRes, enRes, trEnRes, trBnRes, trUrRes] = await Promise.all([
+  let trEn   = translitCache.en[surah.number];
+  let trEnSa = translationCache.en[surah.number];
+  let trBn   = translationCache.bn[surah.number];
+  let trUr   = translationCache.ur[surah.number];
+  const [arRes, enSaRes, trEnRes, trBnRes, trUrRes] = await Promise.all([
     fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ar.alafasy`),
-    fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
-    trEn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`),
-    trBn ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/bn.bengali`),
-    trUr ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ur.ahmedali`)
+    trEnSa ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.sahih`),
+    trEn   ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/en.transliteration`),
+    trBn   ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/bn.bengali`),
+    trUr   ? Promise.resolve(null) : fetch(`https://api.alquran.cloud/v1/surah/${surah.number}/ur.ahmedali`)
   ]);
   const arData = await arRes.json();
-  const enData = await enRes.json();
-  if (trEnRes) { const d = await trEnRes.json(); trEn = d.data?.ayahs || []; translitCache.en[surah.number] = trEn; }
-  if (trBnRes) { const d = await trBnRes.json(); trBn = d.data?.ayahs || []; translationCache.bn[surah.number] = trBn; }
-  if (trUrRes) { const d = await trUrRes.json(); trUr = d.data?.ayahs || []; translationCache.ur[surah.number] = trUr; }
+  if (enSaRes) { const d = await enSaRes.json(); trEnSa = d.data?.ayahs || []; translationCache.en[surah.number] = trEnSa; }
+  if (trEnRes) { const d = await trEnRes.json(); trEn   = d.data?.ayahs || []; translitCache.en[surah.number]    = trEn; }
+  if (trBnRes) { const d = await trBnRes.json(); trBn   = d.data?.ayahs || []; translationCache.bn[surah.number] = trBn; }
+  if (trUrRes) { const d = await trUrRes.json(); trUr   = d.data?.ayahs || []; translationCache.ur[surah.number] = trUr; }
   const arAyahs = arData.data.ayahs;
-  const enAyahs = enData.data?.ayahs || [];
+  const enAyahs = trEnSa || [];
   const container = document.getElementById("quranReaderAyahs");
   const end = Math.min(offset + AYAHS_PER_LOAD, arAyahs.length);
   for (let i = offset; i < end; i++) {
@@ -840,7 +871,7 @@ async function renderAyahBatch(surah, offset) {
   return { end, total: surah.numberOfAyahs };
 }
 
-// User-facing load — manages button state, calls renderAyahBatch.
+// User-facing "load more" action: manages button state and calls renderAyahBatch.
 async function loadMoreAyahs() {
   const surah = currentSurah;
   const offset = ayahOffset;
@@ -868,7 +899,7 @@ async function loadMoreAyahs() {
   }
 }
 
-// Silent scroll-to-ayah — calls renderAyahBatch directly, never touches button.
+// Silently loads ayah batches until the target ayah is rendered, then scrolls to and highlights it.
 async function scrollToAyah(ayahNum) {
   const surah = currentSurah;
   while (ayahOffset < ayahNum && ayahOffset < surah.numberOfAyahs) {
@@ -926,6 +957,7 @@ let currentHadithNum = null;
 let hadithBrowserPage       = 0;
 let hadithBrowserCollection = null;
 
+// Loads the next page of hadith list items; pass reset=true to clear the list and start from page 1.
 async function loadHadithBrowser(reset = false) {
   const col = document.getElementById("hadithCollection").value;
   if (reset || col !== hadithBrowserCollection) {
@@ -978,6 +1010,7 @@ document.getElementById("btnHadithClose").addEventListener("click", () => {
 });
 // ---- end browser ----
 
+// Displays a status or error message in the hadith section and hides the result card.
 function showHadithStatus(msg, isErr = false) {
   const el = document.getElementById("hadithStatus");
   el.textContent = msg;
@@ -986,6 +1019,7 @@ function showHadithStatus(msg, isErr = false) {
   document.getElementById("hadithResult").classList.add("hidden");
 }
 
+// Fetches a single hadith by number and renders it, or shows an error on failure.
 async function fetchHadith(collection, num) {
   showHadithStatus("Loading hadith…");
   try {
@@ -999,11 +1033,12 @@ async function fetchHadith(collection, num) {
   }
 }
 
+// Renders a hadith card with text, grade badge, chapter, and prev/next navigation.
 function renderHadith(data, collection, num) {
   currentHadithNum = num;
   const text  = data.text || "Text unavailable.";
   const grade = (data.grade || "").trim();
-  const chapter = data.chapter_english || data.chapter || "";
+  const chapter = data.chapter || "";
   document.getElementById("hadithLabel").textContent = `${COLL_NAMES[collection]} · #${num}`;
   document.getElementById("hadithBody").textContent = text;
   document.getElementById("hadithRef").textContent = `${COLL_NAMES[collection]}, Hadith ${num}`;
@@ -1036,6 +1071,7 @@ document.getElementById("btnHideHalal").addEventListener("click", () => {
   document.getElementById("btnHideHalal").classList.add("hidden");
 });
 
+// Renders halal restaurant cards with distance, open status, price level, and action links.
 function renderHalal(restaurants) {
   const list = document.getElementById("halalList");
   list.innerHTML = "";
@@ -1073,6 +1109,7 @@ function renderHalal(restaurants) {
   document.getElementById("btnHideHalal").classList.remove("hidden");
 }
 
+// Fetches nearby halal restaurants from the API and renders them.
 async function loadHalalRestaurants() {
   const status = document.getElementById("halalStatus");
   const list   = document.getElementById("halalList");
@@ -1097,6 +1134,7 @@ async function loadHalalRestaurants() {
 // ===================== HALAL GROCERY =====================
 document.getElementById("btnFindGrocery").addEventListener("click", loadHalalGrocery);
 
+// Renders Islamic clothing store cards with distance, open status, and action links.
 function renderClothing(stores) {
   const list = document.getElementById("clothingList");
   list.innerHTML = "";
@@ -1131,6 +1169,7 @@ function renderClothing(stores) {
   list.classList.remove("hidden");
 }
 
+// Fetches nearby Islamic clothing stores from the API and renders them.
 async function loadIslamicClothing() {
   const status = document.getElementById("clothingStatus");
   const list   = document.getElementById("clothingList");
@@ -1162,6 +1201,7 @@ document.getElementById("btnHideGrocery").addEventListener("click", () => {
   document.getElementById("btnHideGrocery").classList.add("hidden");
 });
 
+// Renders halal grocery store cards with distance, open status, and action links.
 function renderGrocery(stores) {
   const list = document.getElementById("groceryList");
   list.innerHTML = "";
@@ -1197,6 +1237,7 @@ function renderGrocery(stores) {
   document.getElementById("btnHideGrocery").classList.remove("hidden");
 }
 
+// Fetches nearby halal grocery stores from the API and renders them.
 async function loadHalalGrocery() {
   const status = document.getElementById("groceryStatus");
   const list   = document.getElementById("groceryList");
@@ -1222,6 +1263,7 @@ async function loadHalalGrocery() {
 let tasbihCount = 0;
 let tasbihGoal  = 33;
 
+// Redraws the SVG progress ring and updates the count/goal labels.
 function tasbihUpdateRing() {
   const circ   = 314.16;
   const pct    = tasbihGoal > 0 ? Math.min(tasbihCount / tasbihGoal, 1) : 0;

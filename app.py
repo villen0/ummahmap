@@ -323,7 +323,11 @@ def islamic_clothing():
     if not results:
         return jsonify({"error": "No Islamic clothing stores found nearby"}), 404
 
-    stores = [format_place(m, lat, lng) for m in results]
+    stores = []
+    for m in results:
+        place = format_place(m, lat, lng)
+        place["distance_m"] = round(place["distance_km"] * 1000)
+        stores.append(place)
     payload = {"stores": stores, "count": len(stores)}
     cache_set(cache_key, payload)
     return jsonify(payload)
