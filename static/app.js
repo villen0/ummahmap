@@ -17,13 +17,14 @@ function safeUrl(url) {
 
 // ===================== TABS =====================
 (function initTabs() {
-  const VALID_TABS = ['prayer', 'discover', 'quran', 'hadith', 'tools'];
+  const VALID_TABS = ['prayer', 'discover', 'quran', 'hadith', 'tools', 'ai'];
 
   function switchTab(name) {
     if (!VALID_TABS.includes(name)) name = 'prayer';
 
     if (name === 'quran'  && !surahsLoaded)           loadSurahList();
     if (name === 'hadith' && !hadithBrowserCollection) loadHadithBrowser(true);
+    if (name === 'ai') renderAITab();
 
     // Panels
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -1379,5 +1380,188 @@ tasbihUpdateRing(); // initialise ring on load
   // iOS: show banner after 3 s
   if (isIos) {
     setTimeout(() => banner.classList.remove("hidden"), 3000);
+  }
+})();
+
+
+// ===================== AI CHAT =====================
+
+const AI_PROVIDER_HINTS = {
+  openai:    'Get your key at platform.openai.com → API keys. GPT-4o mini is low-cost and fast.',
+  anthropic: 'Get your key at console.anthropic.com → API keys. Uses Claude Haiku.',
+  gemini:    'Get your key at aistudio.google.com → Get API key. Gemini 1.5 Flash is free-tier friendly.',
+  groq:      'Get your key at console.groq.com → API keys. Llama 3.3 70B runs at very high speed.',
+};
+
+const AI_PROVIDER_LABELS = {
+  openai:    'OpenAI · GPT-4o mini',
+  anthropic: 'Anthropic · Claude Haiku',
+  gemini:    'Google · Gemini 1.5 Flash',
+  groq:      'Groq · Llama 3.3 70B',
+};
+
+// In-memory chat history — cleared on provider change or page reload
+let aiMessages = [];
+
+// Read provider + key from localStorage
+function getAISettings() {
+  return {
+    provider: localStorage.getItem('um_ai_provider') || '',
+    apiKey:   localStorage.getItem('um_ai_key')      || '',
+  };
+}
+
+// Persist provider + key to localStorage
+function saveAISettings(provider, apiKey) {
+  localStorage.setItem('um_ai_provider', provider);
+  localStorage.setItem('um_ai_key', apiKey);
+}
+
+// Clear saved AI credentials and reset chat history
+function clearAISettings() {
+  localStorage.removeItem('um_ai_provider');
+  localStorage.removeItem('um_ai_key');
+  aiMessages = [];
+}
+
+// Append a single chat bubble to the chat area
+function appendBubble(role, text) {
+  const wrap = document.getElementById('chatWrap');
+  if (!wrap) return;
+  const div = document.createElement('div');
+  div.className = 'chat-bubble ' + role;
+  div.textContent = text;
+  wrap.appendChild(div);
+  wrap.scrollTop = wrap.scrollHeight;
+  return div;
+}
+
+// Show setup card or chat card based on whether an API key is saved
+function renderAITab() {
+  const { provider, apiKey } = getAISettings();
+  const setupCard = document.getElementById('aiSetupCard');
+  const chatCard  = document.getElementById('aiChatCard');
+  if (!setupCard || !chatCard) return;
+
+  if (apiKey && provider) {
+    setupCard.style.display = 'none';
+    chatCard.style.display  = 'block';
+    const lbl = document.getElementById('aiProviderLabel');
+    if (lbl) lbl.textContent = AI_PROVIDER_LABELS[provider] || provider;
+  } else {
+    setupCard.style.display = 'flex';
+    chatCard.style.display  = 'none';
+    updateProviderHint();
+  }
+}
+
+// Update the hint text below the API key input based on selected provider
+function updateProviderHint() {
+  const sel  = document.getElementById('aiProviderSelect');
+  const hint = document.getElementById('aiProviderHint');
+  if (!sel || !hint) return;
+  hint.textContent = AI_PROVIDER_HINTS[sel.value] || '';
+}
+
+// Send user message to backend and render the reply bubble
+async function sendAIMessage() {
+  const input   = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('btnChatSend');
+  const text    = (input ? input.value : '').trim();
+  if (!text) return;
+
+  const { provider, apiKey } = getAISettings();
+  if (!provider || !apiKey) { renderAITab(); return; }
+
+  // Append user bubble and record in history
+  appendBubble('user', text);
+  aiMessages.push({ role: 'user', content: text });
+  if (input) input.value = '';
+  if (sendBtn) sendBtn.disabled = true;
+
+  // Placeholder loading bubble
+  const loadingBubble = appendBubble('loading', '…');
+
+  try {
+    const res = await fetch('/api/ai_chat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ provider, apiKey, messages: aiMessages }),
+    });
+    const data = await res.json();
+
+    if (loadingBubble) loadingBubble.remove();
+
+    if (!res.ok || data.error) {
+      appendBubble('error', 'Error: ' + (data.error || 'Something went wrong. Please try again.'));
+    } else {
+      appendBubble('assistant', data.reply);
+      aiMessages.push({ role: 'assistant', content: data.reply });
+    }
+  } catch (err) {
+    if (loadingBubble) loadingBubble.remove();
+    appendBubble('error', 'Network error — please check your connection and try again.');
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+    if (input) input.focus();
+  }
+}
+
+// Wire up all AI tab UI interactions
+(function initAIChat() {
+  // Provider hint updates when selection changes
+  const providerSel = document.getElementById('aiProviderSelect');
+  if (providerSel) {
+    providerSel.addEventListener('change', updateProviderHint);
+    updateProviderHint();
+  }
+
+  // Save button stores credentials and switches to chat view
+  const btnSave = document.getElementById('btnAISave');
+  if (btnSave) {
+    btnSave.addEventListener('click', () => {
+      const sel = document.getElementById('aiProviderSelect');
+      const inp = document.getElementById('aiKeyInput');
+      const provider = sel ? sel.value.trim() : '';
+      const apiKey   = inp ? inp.value.trim() : '';
+      if (!apiKey) {
+        if (inp) { inp.style.borderColor = 'var(--gold2)'; inp.focus(); }
+        return;
+      }
+      saveAISettings(provider, apiKey);
+      aiMessages = [];
+      renderAITab();
+    });
+  }
+
+  // "Change provider / key" resets to setup view
+  const btnChange = document.getElementById('btnAIChange');
+  if (btnChange) {
+    btnChange.addEventListener('click', () => {
+      clearAISettings();
+      const wrap = document.getElementById('chatWrap');
+      if (wrap) wrap.innerHTML = '';
+      renderAITab();
+    });
+  }
+
+  // Send button click
+  const btnSend = document.getElementById('btnChatSend');
+  if (btnSend) btnSend.addEventListener('click', sendAIMessage);
+
+  // Enter key sends (Shift+Enter inserts newline)
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAIMessage();
+      }
+    });
+    // Auto-resize textarea as user types
+    chatInput.addEventListener('input', () => {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    });
   }
 })();
