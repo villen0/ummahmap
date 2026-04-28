@@ -397,6 +397,18 @@
           <button class="btn-ghost" id="btnTasbihReset"><span class="btn-icon">↺</span> Reset</button>
         </div>
         <div id="tasbihBody">
+          <select id="tasbihDhikr" class="setting-select-inline tasbih-select">
+            <option value="subhanallah">SubhanAllah</option>
+            <option value="alhamdulillah">Alhamdulillah</option>
+            <option value="allahuakbar">Allahu Akbar</option>
+            <option value="lailaha">La ilaha illallah</option>
+            <option value="astaghfirullah">Astaghfirullah</option>
+          </select>
+          <div id="tasbihDhikrDisplay" class="tasbih-dhikr-display">
+            <div class="tasbih-dhikr-ar" id="tasbihDhikrAr"></div>
+            <div class="tasbih-dhikr-translit" id="tasbihDhikrTranslit"></div>
+            <div class="tasbih-dhikr-meaning" id="tasbihDhikrMeaning"></div>
+          </div>
           <div class="tasbih-goals">
             <button class="tasbih-goal-btn active" data-goal="33">33</button>
             <button class="tasbih-goal-btn" data-goal="99">99</button>
