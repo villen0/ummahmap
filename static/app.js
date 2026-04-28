@@ -123,9 +123,8 @@ function setQuote() {
   setTimeout(() => {
     const q = nextQuote();
     textEl.textContent = q.text;
-    if (srcEl) srcEl.textContent = q.src;
     textEl.style.opacity = "1";
-    if (srcEl) srcEl.style.opacity = "1";
+    if (srcEl) { srcEl.textContent = q.src; srcEl.style.opacity = "1"; }
   }, 400);
 }
 setQuote();
